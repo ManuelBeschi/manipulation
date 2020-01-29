@@ -1,0 +1,17 @@
+string[] object_types
+---
+string object
+string inbound_box
+int8 result
+int8 NoInboundBoxFound=-1
+int8 NoObjectsFound=-2
+int8 NoAvailableTrajectories=-3
+int8 GraspFailure=-4
+int8 TrajectoryError=-5
+int8 Success=0
+---
+int8 phase
+int8 GoingToApproach=1
+int8 GoingToGrasp=2
+int8 ReturningToApproach=3
+int8 GoingToTarget=4

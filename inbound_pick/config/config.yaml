@@ -1,0 +1,28 @@
+request_adapters:
+- default_planner_request_adapters/AddTimeParameterization
+- default_planner_request_adapters/FixWorkspaceBounds
+- default_planner_request_adapters/FixStartStateBounds
+- default_planner_request_adapters/FixStartStateCollision
+- default_planner_request_adapters/FixStartStatePathConstraints
+
+inbound:
+  boxes:
+  - {name: "box1", position: [0.193, 0.252, 1.472], quaternion: [-0.501, 0.499, 0.501, 0.499], heigth: 0.01}
+  - {name: "box2", position: [0.700, 0.252, 1.305], quaternion: [0.708, -0.705, -0.034, -0.034], heigth: 0.05}
+
+  objects:
+  - type: "type1"
+    box: "box1"
+
+    grasp_poses:
+    - {tool: "tip", position: [0.193, 0.252, 1.4], quaternion: [-0.501, 0.499, 0.501, 0.499]}
+
+
+  - type: "type1"
+    box: "box2"
+
+    grasp_poses:
+    - {tool: "tip", position: [0.700, 0.252, 1.305], quaternion: [0.708, -0.705, -0.034, -0.034]}
+
+zeros:
+  ur5_shoulder_lift_joint: -1.57

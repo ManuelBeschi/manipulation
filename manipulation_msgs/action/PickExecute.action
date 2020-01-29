@@ -1,0 +1,5 @@
+string object_frame
+----
+bool success
+----
+string state
