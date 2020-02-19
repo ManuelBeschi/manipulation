@@ -33,6 +33,7 @@ PickObjects::PickObjects(const std::string& group_name):
   m_list_objects_srv=m_nh.advertiseService("list_objects",&PickObjects::listObjects,this);
   m_target_pub=m_nh.advertise<geometry_msgs::PoseStamped>("target",1);
 
+  m_grasp_srv=m_nh.serviceClient<std_srvs::SetBool>("/gripper/grasp");
   m_as.reset(new actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>("inbound_pick",
                                                                                      boost::bind(&PickObjects::pickObjectGoalCb,this,_1),
                                                                                      false));
@@ -161,6 +162,10 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
   tf::poseEigenToMsg(selected_grasp_pose->getPose(),target.pose);
   m_target_pub.publish(target);
   execute(pick_plan);
+  std_srvs::SetBool grasp_req;
+  grasp_req.request.data=1;
+  m_grasp_srv.call(grasp_req);
+  ros::Duration(1).sleep();
 
   moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToReturnToApproach(type_names,
                                                                                           selected_box,

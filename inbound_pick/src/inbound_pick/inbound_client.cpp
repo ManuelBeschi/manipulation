@@ -124,7 +124,8 @@ bool InboundFromParam::readBoxesFromParam()
     tf::poseEigenToMsg(T_w_box,box_srv.request.box_pose);
     ROS_INFO_STREAM("Box position\n"<<box_srv.request.box_pose);
     box_srv.request.height=heigth;
-    add_box_client_.call(box_srv);
+    if (!add_box_client_.call(box_srv))
+      return false;
 
 
   }
