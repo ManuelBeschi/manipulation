@@ -47,6 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <manipulation_msgs/PickObjectsAction.h>
 #include <manipulation_msgs/ListOfObjects.h>
 #include <eigen_conversions/eigen_msg.h>
+#include <std_srvs/SetBool.h>
 #define N_ITER 20
 #define TOLERANCE 1e-6
 
@@ -77,6 +78,7 @@ protected:
   ros::ServiceServer m_add_obj_srv;
   ros::ServiceServer m_add_box_srv;
   ros::ServiceServer m_list_objects_srv;
+  ros::ServiceClient m_grasp_srv;
   std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> m_as;
   ros::Publisher m_target_pub;
   ros::NodeHandle m_nh;
