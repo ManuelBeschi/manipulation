@@ -7,22 +7,24 @@ request_adapters:
 
 inbound:
   boxes:
-  - {name: "box1", position: [0.193, 0.252, 1.472], quaternion: [-0.501, 0.499, 0.501, 0.499], heigth: 0.01}
-  - {name: "box2", position: [0.700, 0.252, 1.305], quaternion: [0.708, -0.705, -0.034, -0.034], heigth: 0.05}
+  - {name: "box1", position: [0.423, 0.394, 1.1], quaternion: [0, 1, 0, 0], heigth: 0.1}
+  - {name: "box2", position: [0.85, 0.37, 1.1], quaternion: [0, 1, 0, 0], heigth: 0.1}
+  #- Translation: [-0.038, 0.235, 0.985]
+  #- Rotation: in Quaternion [-0.010, 0.996, 0.092, 0.000]
+
 
   objects:
   - type: "type1"
     box: "box1"
 
     grasp_poses:
-    - {tool: "tip", position: [0.193, 0.252, 1.4], quaternion: [-0.501, 0.499, 0.501, 0.499]}
+    - {tool: "tip", position: [0.423, 0.394, 1.1], quaternion: [0, 1, 0, 0]}
 
 
   - type: "type1"
     box: "box2"
 
     grasp_poses:
-    - {tool: "tip", position: [0.700, 0.252, 1.305], quaternion: [0.708, -0.705, -0.034, -0.034]}
+    - {tool: "tip", position: [0.85, 0.37, 1.1], quaternion: [0, 1, 0, 0]}
 
-zeros:
-  ur5_shoulder_lift_joint: -1.57
+

@@ -38,6 +38,10 @@ InboundFromParam::InboundFromParam(const ros::NodeHandle &nh):
   add_objs_client_=nh_.serviceClient<manipulation_msgs::AddObjects>("add_objects");
   add_box_client_ =nh_.serviceClient<manipulation_msgs::AddBox>("add_box");
 
+  ROS_INFO("Waiting for pick server");
+  add_box_client_.waitForExistence();
+  ROS_INFO("Connection ok");
+
 }
 bool InboundFromParam::readBoxesFromParam()
 {
