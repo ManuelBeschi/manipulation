@@ -81,8 +81,9 @@ protected:
 
   Eigen::Affine3d m_T_w_f; // world <- first slot
   Eigen::Affine3d m_T_w_a; // world <- approach
+  Eigen::Affine3d m_T_w_as; // world <- approach to slot
   Eigen::Affine3d m_T_w_s; // world <- slot
-
+  Eigen::Vector3d m_approach_distance;
   std::vector<Eigen::VectorXd> m_approach_sols;
 
   Eigen::VectorXd m_gaps;
@@ -94,6 +95,9 @@ protected:
   bool ik(const Eigen::Affine3d& T_w_a, std::vector<Eigen::VectorXd >& sols, unsigned int ntrial=N_ITER);
 
   bool ikForTheSlot(std::vector<Eigen::VectorXd >& sols);
+  bool ikForTheApproachSlot(std::vector<Eigen::VectorXd >& sols);
+
+
 public:
   OutboundPallet(const ros::NodeHandle& nh,
                  const ros::NodeHandle& pnh);
@@ -116,6 +120,13 @@ public:
   moveit::planning_interface::MoveGroupInterface::Plan planToSlot(const Eigen::VectorXd& starting_jconf,
                                                                   moveit::planning_interface::MoveItErrorCode& result,
                                                                   Eigen::VectorXd& slot_jconf);
+
+  moveit::planning_interface::MoveGroupInterface::Plan planToApproachSlot(const Eigen::VectorXd& starting_jconf,
+                                                                  moveit::planning_interface::MoveItErrorCode& result,
+                                                                  Eigen::VectorXd& slot_jconf);
+
+
+
 
   moveit::planning_interface::MoveGroupInterface::Plan planToReturnToApproach(const Eigen::VectorXd& starting_jconf,
                                                                               const Eigen::VectorXd& approach_jconf,
