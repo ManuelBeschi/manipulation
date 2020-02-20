@@ -30,6 +30,7 @@ add_action_files(
   PickExecute.action
   TeachPickingPose.action
   PickObjects.action
+  PlaceObjects.action
 )
 
 generate_messages(

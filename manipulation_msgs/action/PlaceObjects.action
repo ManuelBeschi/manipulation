@@ -1,0 +1,14 @@
+string object_type
+---
+int8 result
+int8 NotInitialized=-1
+int8 Full=-2
+int8 NoAvailableTrajectories=-3
+int8 TrajectoryError=-5
+int8 Success=0
+---
+int8 phase
+int8 GoingToApproach=1
+int8 GoingToPlace=2
+int8 ReturningToPlace=3
+
