@@ -377,11 +377,14 @@ namespace pickplace
   bool OutboundPallet::ikForTheSlot(std::vector<Eigen::VectorXd >& sols)
   {
     m_T_w_s=m_T_w_f;
-    for (unsigned int idx=0;idx<3;idx++)
+    m_T_w_s.translation()(0)=m_T_w_f.translation()(0)+m_indexes.at(0)*m_gaps(0);
+    m_T_w_s.translation()(1)=m_T_w_f.translation()(1)+m_indexes.at(1)*m_gaps(1);
+    if (std::floor(m_approach_distance(2)/m_gaps(2))<(int)m_indexes.at(2))
     {
-      ROS_INFO("position(%u)=%u (%f m)",idx,m_indexes.at(idx),m_indexes.at(idx)*m_gaps(idx));
-      m_T_w_s.translation()(idx)=m_T_w_f.translation()(idx)+m_indexes.at(idx)*m_gaps(idx);
+      ROS_ERROR("approach distance is smaller than the desider position");
+      return false;
     }
+    m_T_w_s.translation()(2)=m_T_w_f.translation()(2)+m_approach_distance(2);
     sols=m_approach_sols;
     return ik(m_T_w_s,sols);
   }

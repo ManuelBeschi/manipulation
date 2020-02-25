@@ -188,6 +188,36 @@ bool InboundFromParam::readObjectFromParam()
     ROS_INFO("object type =%s, box name =%s",type.c_str(),box_name.c_str());
 
 
+    if( !object.hasMember("pose") )
+    {
+      ROS_WARN("The element #%zu has not the field 'box'", i);
+      continue;
+    }
+    XmlRpc::XmlRpcValue pose = object["pose"];
+    std::vector<double> position;
+    if( !rosparam_utilities::getParamVector(pose,"position",position) )
+    {
+      ROS_WARN("pose has not the field 'position'");
+      continue;
+    }
+    assert(position.size()==3);
+    obj.pose.position.x=position.at(0);
+    obj.pose.position.y=position.at(1);
+    obj.pose.position.z=position.at(2);
+
+    std::vector<double> quaternion;
+    if( !rosparam_utilities::getParamVector(pose,"quaternion",quaternion) )
+    {
+      ROS_WARN("pose has not the field 'quaternion'");
+      continue;
+    }
+    assert(quaternion.size()==4);
+    obj.pose.orientation.x=quaternion.at(0);
+    obj.pose.orientation.y=quaternion.at(1);
+    obj.pose.orientation.z=quaternion.at(2);
+    obj.pose.orientation.w=quaternion.at(3);
+
+
     if( !object.hasMember("grasp_poses") )
     {
       ROS_WARN("The element #%zu has not the field 'box'", i);
@@ -221,7 +251,7 @@ bool InboundFromParam::readObjectFromParam()
       std::vector<double> quaternion;
       if( !rosparam_utilities::getParamVector(pose,"quaternion",quaternion) )
       {
-        ROS_WARN("The element #%zu has not the field 'name'", ig);
+        ROS_WARN("The element #%u has not the field 'name'", ig);
         continue;
       }
       assert(quaternion.size()==4);
@@ -246,6 +276,7 @@ bool InboundFromParam::readObjectFromParam()
 
     add_objs_srv.request.add_objects.push_back(obj);
     add_objs_client_.call(add_objs_srv);
+
 
 
   }

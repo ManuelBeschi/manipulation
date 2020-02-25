@@ -48,6 +48,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <manipulation_msgs/ListOfObjects.h>
 #include <eigen_conversions/eigen_msg.h>
 #include <std_srvs/SetBool.h>
+#include <shape_msgs/SolidPrimitive.h>
+#include <shape_msgs/Mesh.h>
+
 #define N_ITER 20
 #define TOLERANCE 1e-6
 
@@ -71,6 +74,7 @@ protected:
   moveit::core::JointModelGroup* m_jmg;
   std::string m_group_name;
   std::string tool_name="tip";
+  std::string world_frame="world";
 
   planning_pipeline::PlanningPipelinePtr m_planning_pipeline;
   std::string m_planner_plugin_name;
@@ -81,17 +85,20 @@ protected:
   ros::ServiceClient m_grasp_srv;
   std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> m_as;
   ros::Publisher m_target_pub;
+  ros::Publisher planning_scene_diff_publisher;
   ros::NodeHandle m_nh;
-
+  moveit_msgs::PlanningScene planning_scene;
   void addInboundBox(const InboundBoxPtr& box);
   bool ik(Eigen::Affine3d T_w_a, std::vector<Eigen::VectorXd >& sols, unsigned int ntrial=N_ITER);
+
+  bool addCollisionObject(const ObjectPtr& obj, const geometry_msgs::Pose& obj_pose);
 
 public:
   PickObjects(const std::string& group_name);
 
   /* return false if already present
    */
-  bool createInboundBox(const std::string& box_name, Eigen::Affine3d T_w_box, const double heigth);
+  bool createInboundBox(const std::string& box_name, const Eigen::Affine3d& T_w_box, const double heigth);
 
   std::map<std::string,InboundBoxPtr>::iterator findBox(const std::string& box_name);
   /* return false if box does not exist

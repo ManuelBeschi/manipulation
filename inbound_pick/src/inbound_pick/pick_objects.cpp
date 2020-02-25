@@ -17,6 +17,7 @@ PickObjects::PickObjects(const std::string& group_name):
 
 
   m_planning_scene=std::make_shared<planning_scene::PlanningScene>(m_kinematic_model);
+  planning_scene_diff_publisher = m_nh.advertise<moveit_msgs::PlanningScene>("planning_scene", 1);
 
   m_planner_plugin_name= "ha_planner/DgacoPlannerManager";
   if (!m_nh.getParam("planning_plugin", m_planner_plugin_name))
@@ -71,7 +72,11 @@ bool PickObjects::addObjectCb(manipulation_msgs::AddObjects::Request& req,
       PosesPair p(g.tool_name,T);
       poses.insert(p);
     }
-    createObject(obj.type,req.inbound_box_name,poses);
+    ObjectPtr obj_ptr=createObject(obj.type,req.inbound_box_name,poses);
+    if (!addCollisionObject(obj_ptr,obj.pose))
+    {
+      ROS_WARN("Unable to add collision object");
+    }
   }
   res.results=manipulation_msgs::AddObjects::Response::Success;
   return true;
@@ -132,7 +137,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
   ROS_PROTO("plan to approach in %f second",plan.planning_time_);
 
   geometry_msgs::PoseStamped target;
-  target.header.frame_id="world";
+  target.header.frame_id=world_frame;
   target.header.stamp=ros::Time::now();
   tf::poseEigenToMsg(selected_box->getApproachPose(),target.pose);
   m_target_pub.publish(target);
@@ -196,18 +201,18 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
 
 }
 
-bool PickObjects::createInboundBox(const std::string& box_name, Eigen::Affine3d T_w_box, const double heigth)
+bool PickObjects::createInboundBox(const std::string& box_name, const Eigen::Affine3d& T_w_box, const double heigth)
 {
   std::vector<Eigen::VectorXd> sols;
   InboundBoxPtr box=std::make_shared<InboundBox>(box_name,T_w_box,heigth);
   if (!ik(T_w_box,sols))
     return false;
 
-  ROS_PROTO("found %zu ik solutions for box %s",sols.size(),box_name.c_str());
-//  sols.clear();
   if (!ik(box->getApproachPose(),sols,sols.size()))
+  {
+    ROS_ERROR("found %zu ik solutions for approach",sols.size());
     return false;
-  ROS_PROTO("found %zu ik solutions for approach",sols.size());
+  }
 
   box->setConfigurations(sols);
   m_boxes.insert(std::pair<std::string,InboundBoxPtr>(box_name,box));
@@ -553,6 +558,32 @@ void  PickObjects::wait()
 
 }
 
+bool PickObjects::addCollisionObject(const ObjectPtr& obj, const geometry_msgs::Pose& obj_pose)
+{
+  /* Define a box to be attached */
+  shape_msgs::SolidPrimitive primitive;
+  primitive.type = primitive.BOX;
+  primitive.dimensions.resize(3);
+  primitive.dimensions[0] = 0.05;
+  primitive.dimensions[1] = 0.05;
+  primitive.dimensions[2] = 0.05;
+
+  moveit_msgs::AttachedCollisionObject attached_object;
+  attached_object.link_name = world_frame;
+  attached_object.object.header.frame_id = world_frame;
+  attached_object.object.id = obj->getId();
+
+
+  attached_object.object.primitives.push_back(primitive);
+
+
+  attached_object.object.primitive_poses.push_back(obj_pose);
+
+  planning_scene.world.collision_objects.push_back(attached_object.object);
+  planning_scene.is_diff = true;
+  planning_scene_diff_publisher.publish(planning_scene);
+  return true;
+}
 
 
 
