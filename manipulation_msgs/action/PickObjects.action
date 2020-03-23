@@ -1,6 +1,7 @@
 string[] object_types
 ---
-string object
+string object_id
+string object_type
 string inbound_box
 int8 result
 int8 NoInboundBoxFound=-1

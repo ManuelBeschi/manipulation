@@ -1,4 +1,6 @@
 string object_type
+string object_id
+int8[] indexes
 ---
 int8 result
 int8 NotInitialized=-1
