@@ -1,6 +1,6 @@
 string object_type
 string object_id
-int8[] indexes
+string place_id
 ---
 int8 result
 int8 NotInitialized=-1
