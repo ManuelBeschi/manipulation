@@ -104,6 +104,15 @@ bool PickObjects::addBoxCb(manipulation_msgs::AddBox::Request &req, manipulation
 
 
 
+bool OutboundPallet::ikForTheSlot(std::vector<Eigen::VectorXd >& sols)
+{
+  m_T_w_s=m_T_w_f;
+  m_T_w_s.translation()(0)=m_T_w_f.translation()(0)+m_indexes.at(0)*m_gaps(0);
+  m_T_w_s.translation()(1)=m_T_w_f.translation()(1)+m_indexes.at(1)*m_gaps(1);
+  m_T_w_s.translation()(2)=m_T_w_f.translation()(2)+m_indexes.at(2)*m_gaps(2);
+  sols=m_approach_sols;
+  return ik(m_T_w_s,sols);
+}
 
 moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproachSlot(const Eigen::VectorXd& starting_jconf, moveit::planning_interface::MoveItErrorCode& result, Eigen::VectorXd& slot_jconf)
 {

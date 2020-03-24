@@ -89,6 +89,10 @@ protected:
   std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> m_as;
   ros::Publisher m_target_pub;
 
+  bool ikForTheSlot(std::vector<Eigen::VectorXd >& sols);
+
+  moveit::planning_interface::MoveGroupInterface::Plan planToApproachSlot(const Eigen::VectorXd& starting_jconf,
+                                                                          moveit::planning_interface::MoveItErrorCode& result, Eigen::VectorXd& slot_jconf);
 
 
 
