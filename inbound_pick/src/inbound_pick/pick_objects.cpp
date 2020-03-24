@@ -104,64 +104,56 @@ bool PickObjects::addBoxCb(manipulation_msgs::AddBox::Request &req, manipulation
 
 
 
-bool OutboundPallet::ikForTheSlot(std::vector<Eigen::VectorXd >& sols)
-{
-  m_T_w_s=m_T_w_f;
-  m_T_w_s.translation()(0)=m_T_w_f.translation()(0)+m_indexes.at(0)*m_gaps(0);
-  m_T_w_s.translation()(1)=m_T_w_f.translation()(1)+m_indexes.at(1)*m_gaps(1);
-  m_T_w_s.translation()(2)=m_T_w_f.translation()(2)+m_indexes.at(2)*m_gaps(2);
-  sols=m_approach_sols;
-  return ik(m_T_w_s,sols);
-}
 
-moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproachSlot(const Eigen::VectorXd& starting_jconf, moveit::planning_interface::MoveItErrorCode& result, Eigen::VectorXd& slot_jconf)
-{
-  moveit::planning_interface::MoveGroupInterface::Plan plan;
 
-  robot_state::RobotState state = *m_group->getCurrentState();
-  state.setJointGroupPositions(m_jmg,starting_jconf);
-  moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
+//moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproachSlot(const Eigen::VectorXd& starting_jconf, moveit::planning_interface::MoveItErrorCode& result, Eigen::VectorXd& slot_jconf)
+//{
+//  moveit::planning_interface::MoveGroupInterface::Plan plan;
 
-  planning_interface::MotionPlanRequest req;
-  planning_interface::MotionPlanResponse res;
-  req.group_name=m_group_name;
-  req.start_state=plan.start_state_;
-  req.allowed_planning_time=5;
-  robot_state::RobotState goal_state(m_kinematic_model);
+//  robot_state::RobotState state = *m_group->getCurrentState();
+//  state.setJointGroupPositions(m_jmg,starting_jconf);
+//  moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
 
-  std::vector<Eigen::VectorXd> sols;
-  if (!ikForTheApproachSlot(sols))
-  {
-    ROS_ERROR("No Ik solution for the slot");
-    result=moveit::planning_interface::MoveItErrorCode::GOAL_IN_COLLISION;
-    return plan;
-  }
+//  planning_interface::MotionPlanRequest req;
+//  planning_interface::MotionPlanResponse res;
+//  req.group_name=m_group_name;
+//  req.start_state=plan.start_state_;
+//  req.allowed_planning_time=5;
+//  robot_state::RobotState goal_state(m_kinematic_model);
 
-  for (const Eigen::VectorXd& goal: sols)
-  {
+//  std::vector<Eigen::VectorXd> sols;
+//  if (!ikForTheApproachSlot(sols))
+//  {
+//    ROS_ERROR("No Ik solution for the slot");
+//    result=moveit::planning_interface::MoveItErrorCode::GOAL_IN_COLLISION;
+//    return plan;
+//  }
 
-    goal_state.setJointGroupPositions(m_jmg, goal);
-    moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, m_jmg);
-    req.goal_constraints.push_back(joint_goal);
+//  for (const Eigen::VectorXd& goal: sols)
+//  {
 
-  }
-  ROS_PROTO("Found %zu solution",sols.size());
+//    goal_state.setJointGroupPositions(m_jmg, goal);
+//    moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, m_jmg);
+//    req.goal_constraints.push_back(joint_goal);
 
-  if (!m_planning_pipeline->generatePlan(m_planning_scene, req, res))
-  {
-    ROS_ERROR("Could not compute plan successfully");
-    result= res.error_code_;
-    return plan;
-  }
-  plan.planning_time_=res.planning_time_;
+//  }
+//  ROS_PROTO("Found %zu solution",sols.size());
 
-  res.trajectory_->getRobotTrajectoryMsg(plan.trajectory_);
+//  if (!m_planning_pipeline->generatePlan(m_planning_scene, req, res))
+//  {
+//    ROS_ERROR("Could not compute plan successfully");
+//    result= res.error_code_;
+//    return plan;
+//  }
+//  plan.planning_time_=res.planning_time_;
 
-  res.trajectory_->getLastWayPoint().copyJointGroupPositions(m_jmg,slot_jconf);
-  result= res.error_code_;
+//  res.trajectory_->getRobotTrajectoryMsg(plan.trajectory_);
 
-  return plan;
-}
+//  res.trajectory_->getLastWayPoint().copyJointGroupPositions(m_jmg,slot_jconf);
+//  result= res.error_code_;
+
+//  return plan;
+//}
 
 
 
