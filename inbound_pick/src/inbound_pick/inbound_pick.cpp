@@ -24,13 +24,16 @@ InboundBox::InboundBox(const std::string &name, const Eigen::Affine3d T_w_box, c
 {
   m_T_w_box_a=m_T_w_box;
   m_T_w_box_a.translation()(2)+=m_height*1.5;
-  ROS_FATAL_STREAM("box\n"<<m_T_w_box.matrix()<<"\napproach\n"<<m_T_w_box_a.matrix());
 }
 
-void InboundBox::addObject(const ObjectPtr &object)
+bool InboundBox::addObject(const ObjectPtr &object)
 {
-  std::string id=m_name+"_"+std::to_string(m_id++)+"_"+object->getType();
-  object->setId(id);
+  std::string id=object->getId();
+  if (m_objects.find(id)!=m_objects.end())
+  {
+    ROS_ERROR("this id is already used");
+    return false;
+  }
   m_objects.insert(std::pair<std::string,ObjectPtr>(id,object));
 
   std::map<std::string,std::vector<std::string>>::iterator it;
@@ -39,20 +42,23 @@ void InboundBox::addObject(const ObjectPtr &object)
   {
     std::vector<std::string> ids;
     ids.push_back(object->getId());
-    ROS_FATAL("[BOX %s] add object of type %s, id=%s",m_name.c_str(),object->getType().c_str(),object->getId().c_str());
+    ROS_DEBUG("[BOX %s] add object of type %s, id=%s",m_name.c_str(),object->getType().c_str(),object->getId().c_str());
     m_ids_by_type.insert(std::pair<std::string,std::vector<std::string>>(object->getType(),ids));
   }
   else
   {
-    ROS_FATAL("[BOX %s] add object of type %s, id=%s",m_name.c_str(),object->getType().c_str(),object->getId().c_str());
+    ROS_DEBUG("[BOX %s] add object of type %s, id=%s",m_name.c_str(),object->getType().c_str(),object->getId().c_str());
     it->second.push_back(object->getId());
   }
+  return true;
 }
 
-void InboundBox::addObjects(const std::vector<ObjectPtr> &objects)
+bool InboundBox::addObjects(const std::vector<ObjectPtr> &objects)
 {
   for (const ObjectPtr& object: objects)
-    addObject(object);
+    if (!addObject(object))
+      return false;
+  return true;
 }
 
 bool InboundBox::removeObject(const std::string &object_id)
@@ -83,7 +89,7 @@ bool InboundBox::removeObject(const std::string &object_id)
       ROS_ERROR("the object (id=%s) was in the inbound box, but not mapped by type (type%s)",object_id.c_str(),type.c_str());
 
   }
-  ROS_FATAL("removed");
+  ROS_PROTO("object %s removed from the inbound box",object_id.c_str());
 
   return true;
 }

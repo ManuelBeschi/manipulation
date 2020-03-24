@@ -40,6 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <moveit/kinematic_constraints/utils.h>
 #include <pluginlib/class_loader.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/server/simple_action_server.h>
 #include <manipulation_msgs/AddObjects.h>
@@ -49,6 +50,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <eigen_conversions/eigen_msg.h>
 #include <std_srvs/SetBool.h>
 #include <rosparam_utilities/rosparam_utilities.h>
+#include <object_loader_msgs/detachObject.h>
 #define N_ITER 20
 #define TOLERANCE 1e-6
 
@@ -69,11 +71,14 @@ protected:
   moveit::core::JointModelGroup* m_jmg;
   std::string m_group_name;
   std::string tool_name="tip";
+  std::string world_frame="world";
+
 
   planning_pipeline::PlanningPipelinePtr m_planning_pipeline;
   std::string m_planner_plugin_name;
 
   ros::ServiceClient m_grasp_srv;
+  ros::ServiceClient m_detach_object_srv;
   std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>> m_as;
   ros::Publisher m_target_pub;
   ros::NodeHandle m_nh;

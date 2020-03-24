@@ -40,7 +40,7 @@ int main(int argc, char **argv)
   pickplace::PosesMap poses;
   poses.insert(pickplace::PosesPair(tool_name,T_w_obj1));
 
-  pick.createObject("type1","box1",poses);
+  pick.createObject("type1","id01","box1",poses);
 
 
   Eigen::Affine3d T_w_obj2=T_w_box2;
@@ -49,7 +49,7 @@ int main(int argc, char **argv)
   pickplace::PosesMap poses_obj2;
   poses_obj2.insert(pickplace::PosesPair(tool_name,T_w_obj2));
 
-  pick.createObject("type1","box2",poses_obj2);
+  pick.createObject("type1","id02","box2",poses_obj2);
 
 
   for (unsigned int it=0;it<2;it++)

@@ -48,8 +48,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <manipulation_msgs/ListOfObjects.h>
 #include <eigen_conversions/eigen_msg.h>
 #include <std_srvs/SetBool.h>
-#include <shape_msgs/SolidPrimitive.h>
-#include <shape_msgs/Mesh.h>
+#include <object_loader_msgs/attachObject.h>
+#include <object_loader_msgs/detachObject.h>
 
 #define N_ITER 20
 #define TOLERANCE 1e-6
@@ -83,15 +83,19 @@ protected:
   ros::ServiceServer m_add_box_srv;
   ros::ServiceServer m_list_objects_srv;
   ros::ServiceClient m_grasp_srv;
+
+  ros::ServiceClient m_attach_obj_;
+
   std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> m_as;
   ros::Publisher m_target_pub;
-  ros::Publisher planning_scene_diff_publisher;
+
+
+
+
   ros::NodeHandle m_nh;
-  moveit_msgs::PlanningScene planning_scene;
   void addInboundBox(const InboundBoxPtr& box);
   bool ik(Eigen::Affine3d T_w_a, std::vector<Eigen::VectorXd >& sols, unsigned int ntrial=N_ITER);
 
-  bool addCollisionObject(const ObjectPtr& obj, const geometry_msgs::Pose& obj_pose);
 
 public:
   PickObjects(const std::string& group_name);
@@ -105,7 +109,7 @@ public:
    */
   bool removeInboundBox(const std::string& box_name);
 
-  ObjectPtr createObject(const std::string& type,
+  ObjectPtr createObject(const std::string& type, const std::string& id,
                          const std::string& box_name,
                          const PosesMap& poses);
 

@@ -17,7 +17,7 @@ PickObjects::PickObjects(const std::string& group_name):
 
 
   m_planning_scene=std::make_shared<planning_scene::PlanningScene>(m_kinematic_model);
-  planning_scene_diff_publisher = m_nh.advertise<moveit_msgs::PlanningScene>("planning_scene", 1);
+
 
   m_planner_plugin_name= "ha_planner/DgacoPlannerManager";
   if (!m_nh.getParam("planning_plugin", m_planner_plugin_name))
@@ -32,6 +32,9 @@ PickObjects::PickObjects(const std::string& group_name):
   m_add_obj_srv=m_nh.advertiseService("add_objects",&PickObjects::addObjectCb,this);
   m_add_box_srv=m_nh.advertiseService("add_box",&PickObjects::addBoxCb,this);
   m_list_objects_srv=m_nh.advertiseService("list_objects",&PickObjects::listObjects,this);
+
+  m_attach_obj_=m_nh.serviceClient<object_loader_msgs::attachObject>("attach_object_to_link");
+
   m_target_pub=m_nh.advertise<geometry_msgs::PoseStamped>("target",1);
 
   m_grasp_srv=m_nh.serviceClient<std_srvs::SetBool>("/gripper/grasp");
@@ -60,10 +63,9 @@ bool PickObjects::listObjects(manipulation_msgs::ListOfObjects::Request &req, ma
 bool PickObjects::addObjectCb(manipulation_msgs::AddObjects::Request& req,
                               manipulation_msgs::AddObjects::Response& res)
 {
-  ROS_INFO_STREAM("add objects\n"<<req);
   for (const manipulation_msgs::Object& obj: req.add_objects)
   {
-    ROS_INFO_STREAM("object:\n"<<obj);
+    ROS_DEBUG("adding object %s of type %s in box %s",obj.id.c_str(),obj.type.c_str(),req.inbound_box_name.c_str());
     pickplace::PosesMap poses;
     for (const manipulation_msgs::Grasp& g: obj.grasping_poses)
     {
@@ -72,11 +74,10 @@ bool PickObjects::addObjectCb(manipulation_msgs::AddObjects::Request& req,
       PosesPair p(g.tool_name,T);
       poses.insert(p);
     }
-    ObjectPtr obj_ptr=createObject(obj.type,req.inbound_box_name,poses);
-    if (!addCollisionObject(obj_ptr,obj.pose))
-    {
-      ROS_WARN("Unable to add collision object");
-    }
+    ObjectPtr obj_ptr=createObject(obj.type,obj.id,req.inbound_box_name,poses);
+    if (!obj_ptr)
+      continue;
+
   }
   res.results=manipulation_msgs::AddObjects::Response::Success;
   return true;
@@ -94,7 +95,7 @@ bool PickObjects::addBoxCb(manipulation_msgs::AddBox::Request &req, manipulation
 
   Eigen::Affine3d T_w_box;
   tf::poseMsgToEigen(req.box_pose,T_w_box);
-  ROS_INFO_STREAM("Creating a box named "<<req.inbound_box_name << " in position\n" << req.box_pose << "\n with approaching heigth ="<<req.height);
+  ROS_DEBUG_STREAM("Creating a box named "<<req.inbound_box_name << " in position\n" << req.box_pose << "\n with approaching heigth ="<<req.height);
   bool ok=createInboundBox(req.inbound_box_name,T_w_box,req.height);
   if (!ok)
     ROS_ERROR("unable to create the box");
@@ -164,13 +165,39 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
   }
 
   wait();
+
   tf::poseEigenToMsg(selected_grasp_pose->getPose(),target.pose);
   m_target_pub.publish(target);
   execute(pick_plan);
+  wait();
+
+  ros::Duration(0.5).sleep();
+
+  object_loader_msgs::attachObject attach_srv;
+  attach_srv.request.obj_id=selected_object->getId();
+  attach_srv.request.link_name=selected_grasp_pose->getToolName();;
+  if (!m_attach_obj_.call(attach_srv))
+  {
+    action_res.result=manipulation_msgs::PickObjectsResult::NoObjectsFound;
+    ROS_ERROR("unaspected error calling %s service",m_attach_obj_.getService().c_str());
+    m_as->setAborted(action_res,"unaspected error calling attach server");
+    return;
+  }
+  if (!attach_srv.response.success)
+  {
+    action_res.result=manipulation_msgs::PickObjectsResult::NoObjectsFound;
+    ROS_ERROR("unable to attach object");
+    m_as->setAborted(action_res,"unable to attach object");
+    return;
+  }
+
+  ROS_PROTO("attached collision object %s to tool %s",attach_srv.request.obj_id.c_str(),attach_srv.request.link_name.c_str());
+
   std_srvs::SetBool grasp_req;
   grasp_req.request.data=1;
   m_grasp_srv.call(grasp_req);
   ros::Duration(1).sleep();
+
 
   moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToReturnToApproach(type_names,
                                                                                           selected_box,
@@ -194,7 +221,8 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
   tf::poseEigenToMsg(selected_box->getApproachPose(),target.pose);
   m_target_pub.publish(target);
   execute(return_plan);
-
+  action_res.object_type=selected_object->getType();
+  action_res.object_id=selected_object->getId();
   action_res.result=manipulation_msgs::PickObjectsResult::Success;
   m_as->setSucceeded(action_res,"ok");
   return;
@@ -210,14 +238,17 @@ bool PickObjects::createInboundBox(const std::string& box_name, const Eigen::Aff
 
   if (!ik(box->getApproachPose(),sols,sols.size()))
   {
-    ROS_ERROR("found %zu ik solutions for approach",sols.size());
+    ROS_ERROR("found %zu ik solutions for approach pose of %s",sols.size(),box_name.c_str());
     return false;
   }
 
   box->setConfigurations(sols);
   m_boxes.insert(std::pair<std::string,InboundBoxPtr>(box_name,box));
 
+  geometry_msgs::Pose box_pose;
+  tf::poseEigenToMsg(T_w_box,box_pose);
   return true;
+
 }
 
 std::map<std::string,InboundBoxPtr>::iterator PickObjects::findBox(const std::string &box_name)
@@ -243,12 +274,27 @@ bool PickObjects::removeObject(const std::string& type,
 }
 
 ObjectPtr PickObjects::createObject(const std::string& type,
+                                    const std::string& id,
                                     const std::string& box_name,
                                     const PosesMap& poses)
 {
   ObjectPtr obj = std::make_shared<Object>(type);
-  InboundBoxPtr box=findBox(box_name)->second;
+  obj->setId(id);
 
+  std::vector<std::string> object_ids;
+  object_ids.push_back(id);
+
+
+
+  std::map<std::string,InboundBoxPtr>::iterator it=findBox(box_name);
+  if (it==m_boxes.end())
+  {
+    ROS_WARN("box %s is not managed by this inbound_pick",box_name.c_str());
+    obj.reset();
+    return obj;
+  }
+
+  InboundBoxPtr box=findBox(box_name)->second;
   for (const auto& pose : poses)
   {
     std::vector<Eigen::VectorXd> sols=box->getConfigurations();
@@ -261,8 +307,10 @@ ObjectPtr PickObjects::createObject(const std::string& type,
       }
     }
   }
-  box->addObject(obj);
+  if (box->addObject(obj))
+    obj.reset();
   return obj;
+
 }
 
 
@@ -296,7 +344,7 @@ std::map<std::string,InboundBoxPtr> PickObjects::searchBoxWithTypes(const std::v
   return possible_boxes;
 }
 
-
+/*
 bool PickObjects::ik(Eigen::Affine3d T_w_a, std::vector<Eigen::VectorXd>& sols, unsigned int ntrial)
 {
   std::vector<Eigen::VectorXd> solutions;
@@ -319,8 +367,14 @@ bool PickObjects::ik(Eigen::Affine3d T_w_a, std::vector<Eigen::VectorXd>& sols, 
       state.setToRandomPositions();
     }
 
+
     if (state.setFromIK(m_jmg,(Eigen::Isometry3d)T_w_a.matrix()))
     {
+      if (!state.satisfiesBounds())
+      {
+        ROS_DEBUG("unable to find IK solutions for this trial");
+        continue;
+      }
       Eigen::VectorXd js;
       state.copyJointGroupPositions(m_group_name,js);
       if (solutions.size()==0)
@@ -348,13 +402,81 @@ bool PickObjects::ik(Eigen::Affine3d T_w_a, std::vector<Eigen::VectorXd>& sols, 
     }
     else
     {
-      ROS_WARN("unable to find any solutions");
+      ROS_DEBUG("unable to find IK solutions for this trial");
     }
   }
 
   sols=solutions;
   return found;
 }
+*/
+bool PickObjects::ik(Eigen::Affine3d T_w_a, std::vector<Eigen::VectorXd>& sols, unsigned int ntrial)
+{
+  std::map<double,Eigen::VectorXd> solutions;
+  robot_state::RobotState state = *m_group->getCurrentState();
+  Eigen::VectorXd actual_configuration;
+  state.copyJointGroupPositions(m_group_name,actual_configuration);
+  unsigned int n_seed=sols.size();
+  bool found=false;
+
+  for (unsigned int iter=0;iter<ntrial;iter++)
+  {
+    if (iter<n_seed)
+    {
+      state.setJointGroupPositions(m_jmg,sols.at(iter));
+    }
+    else if (iter==n_seed)
+    {
+      state = *m_group->getCurrentState();
+    }
+    else
+    {
+      state.setToRandomPositions();
+    }
+
+    if (state.setFromIK(m_jmg,(Eigen::Isometry3d)T_w_a.matrix()))
+    {
+      Eigen::VectorXd js;
+      state.copyJointGroupPositions(m_group_name,js);
+      double dist=(js-actual_configuration).norm();
+      if (solutions.size()==0)
+      {
+        solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
+        found=true;
+      }
+      else
+      {
+        bool is_diff=true;
+        for (const std::pair<double,Eigen::VectorXd>& sol: solutions)
+        {
+          if ((sol.second-js).norm()<TOLERANCE)
+          {
+            is_diff=false;
+            break;
+          }
+        }
+        if (is_diff)
+        {
+          solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
+          found=true;
+        }
+      }
+    }
+    else
+    {
+      ROS_DEBUG("unable to find solutions for this seed");
+    }
+  }
+
+  sols.clear();
+  for (const std::pair<double,Eigen::VectorXd>& sol: solutions)
+  {
+    sols.push_back(sol.second);
+  }
+
+  return found;
+}
+
 
 moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(const std::map<std::string,InboundBoxPtr>& possible_boxes,
                                                                                 moveit::planning_interface::MoveItErrorCode& result,
@@ -368,9 +490,13 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
   moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
 
   planning_interface::MotionPlanRequest req;
+
   planning_interface::MotionPlanResponse res;
+  ROS_PROTO("Group name = %s",m_group_name.c_str());
+
   req.group_name=m_group_name;
   req.start_state=plan.start_state_;
+  req.allowed_planning_time=5;
 
   robot_state::RobotState goal_state(m_kinematic_model);
 
@@ -456,7 +582,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
   planning_interface::MotionPlanResponse res;
   req.group_name=m_group_name;
   req.start_state=plan.start_state_;
-
+  req.allowed_planning_time=5;
   robot_state::RobotState goal_state(m_kinematic_model);
 
   for (const ObjectPtr& obj: objects)
@@ -525,7 +651,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToReturnTo
   planning_interface::MotionPlanResponse res;
   req.group_name=m_group_name;
   req.start_state=plan.start_state_;
-
+  req.allowed_planning_time=5;
   robot_state::RobotState goal_state(m_kinematic_model);
 
   goal_state.setJointGroupPositions(m_jmg, approach_jconf);
@@ -557,34 +683,6 @@ void  PickObjects::wait()
 {
 
 }
-
-bool PickObjects::addCollisionObject(const ObjectPtr& obj, const geometry_msgs::Pose& obj_pose)
-{
-  /* Define a box to be attached */
-  shape_msgs::SolidPrimitive primitive;
-  primitive.type = primitive.BOX;
-  primitive.dimensions.resize(3);
-  primitive.dimensions[0] = 0.05;
-  primitive.dimensions[1] = 0.05;
-  primitive.dimensions[2] = 0.05;
-
-  moveit_msgs::AttachedCollisionObject attached_object;
-  attached_object.link_name = world_frame;
-  attached_object.object.header.frame_id = world_frame;
-  attached_object.object.id = obj->getId();
-
-
-  attached_object.object.primitives.push_back(primitive);
-
-
-  attached_object.object.primitive_poses.push_back(obj_pose);
-
-  planning_scene.world.collision_objects.push_back(attached_object.object);
-  planning_scene.is_diff = true;
-  planning_scene_diff_publisher.publish(planning_scene);
-  return true;
-}
-
 
 
 }

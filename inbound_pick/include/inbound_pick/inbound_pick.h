@@ -29,9 +29,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ros/ros.h>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+#include <moveit_msgs/AttachedCollisionObject.h>
 
-
-#define ROS_PROTO(...) ROS_LOG(::ros::console::levels::Fatal, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
+#define ROS_PROTO(...) ROS_LOG(::ros::console::levels::Debug, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
+#define ROS_PROTO_STREAM(...) ROS_LOG_STREAM(::ros::console::levels::Debug, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
 
 namespace pickplace {
 
@@ -96,11 +97,11 @@ public:
 
   /* add an object
    */
-  void addObject(const ObjectPtr& object);
+  bool addObject(const ObjectPtr& object);
 
   /* add a list of objects
    */
-  void addObjects(const std::vector<ObjectPtr>& objects);
+  bool addObjects(const std::vector<ObjectPtr>& objects);
 
   /* remove object with a specific id, return false if the object is not in the inbound box
   */

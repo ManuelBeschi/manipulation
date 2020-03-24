@@ -8,11 +8,13 @@ find_package(catkin REQUIRED COMPONENTS
   rosdyn_core
   std_srvs
   rosparam_utilities
+  object_loader_msgs
+  tf_conversions
 )
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES inbound_pick
-  CATKIN_DEPENDS moveit_planning_helper manipulation_msgs roscpp rosdyn_core std_srvs rosparam_utilities
+  CATKIN_DEPENDS moveit_planning_helper manipulation_msgs roscpp rosdyn_core std_srvs rosparam_utilities object_loader_msgs tf_conversions
   DEPENDS
 )
 include_directories(

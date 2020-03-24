@@ -58,9 +58,10 @@ namespace pickplace
     m_kinematic_model = robot_model_loader.getModel();
     m_jmg = m_kinematic_model->getJointModelGroup(group_name);
 
-
-
     m_planning_scene=std::make_shared<planning_scene::PlanningScene>(m_kinematic_model);
+
+
+
 
     m_planner_plugin_name= "ha_planner/DgacoPlannerManager";
     if (!m_nh.getParam("planning_plugin", m_planner_plugin_name))
@@ -84,6 +85,7 @@ namespace pickplace
 
     m_target_pub=m_nh.advertise<geometry_msgs::PoseStamped>("target",1);
     m_grasp_srv=m_nh.serviceClient<std_srvs::SetBool>("/gripper/grasp");
+    m_detach_object_srv=m_nh.serviceClient<object_loader_msgs::detachObject>("detach_object_to_link");
 
     m_as.reset(new actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>(m_pnh,"place",
                                                                                         boost::bind(&OutboundPallet::placeObjectGoalCb,this,_1),
@@ -205,6 +207,7 @@ namespace pickplace
       return;
     }
 
+    ROS_PROTO("plannig to approach");
 
     Eigen::VectorXd approach_jconf;
     moveit::planning_interface::MoveGroupInterface::Plan plan=planToApproach(result,approach_jconf);
@@ -247,7 +250,7 @@ namespace pickplace
 
 
     Eigen::VectorXd slot_jconf;
-    moveit::planning_interface::MoveGroupInterface::Plan pick_plan=planToSlot(approach_slot_jconf,
+    moveit::planning_interface::MoveGroupInterface::Plan plan_plan=planToSlot(approach_slot_jconf,
                                                                               result,
                                                                               slot_jconf);
 
@@ -262,7 +265,27 @@ namespace pickplace
     wait();
     tf::poseEigenToMsg(m_T_w_s,target.pose);
     m_target_pub.publish(target);
-    execute(pick_plan);
+    execute(plan_plan);
+    wait();
+
+    ros::Duration(0.5).sleep();
+
+    object_loader_msgs::detachObject detach_srv;
+    detach_srv.request.obj_id=goal->object_id;
+    if (!m_detach_object_srv.call(detach_srv))
+    {
+      ROS_ERROR("unaspected error calling %s service",m_detach_object_srv.getService().c_str());
+      m_as->setAborted(action_res,"unaspected error calling detach server");
+      return;
+    }
+    if (!detach_srv.response.success)
+    {
+      ROS_ERROR("unable to detach object id %s",goal->object_id.c_str());
+      m_as->setAborted(action_res,"unable to attach object");
+      return;
+    }
+
+    ROS_PROTO("detached collision object %s ",detach_srv.request.obj_id.c_str());
 
 
     std_srvs::SetBool grasp_req;
@@ -270,11 +293,15 @@ namespace pickplace
     m_grasp_srv.call(grasp_req);
     ros::Duration(1).sleep();
 
-    moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToReturnToApproach(slot_jconf,
-                                                                                            approach_slot_jconf,
-                                                                                            result
-                                                                                            );
+//    moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToReturnToApproach(slot_jconf,
+//                                                                                            approach_slot_jconf,
+//                                                                                            result
+//                                                                                            );
 
+
+    moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(slot_jconf,
+                                                                                        result,
+                                                                                        approach_slot_jconf);
 
     if (!result)
     {
@@ -317,8 +344,10 @@ namespace pickplace
 
   bool OutboundPallet::ik(const Eigen::Affine3d& T_w_a, std::vector<Eigen::VectorXd>& sols, unsigned int ntrial)
   {
-    std::vector<Eigen::VectorXd> solutions;
+    std::map<double,Eigen::VectorXd> solutions;
     robot_state::RobotState state = *m_group->getCurrentState();
+    Eigen::VectorXd actual_configuration;
+    state.copyJointGroupPositions(m_group_name,actual_configuration);
     unsigned int n_seed=sols.size();
     bool found=false;
 
@@ -341,17 +370,18 @@ namespace pickplace
       {
         Eigen::VectorXd js;
         state.copyJointGroupPositions(m_group_name,js);
+        double dist=(js-actual_configuration).norm();
         if (solutions.size()==0)
         {
-          solutions.push_back(js);
+          solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
           found=true;
         }
         else
         {
           bool is_diff=true;
-          for (const Eigen::VectorXd& sol: solutions)
+          for (const std::pair<double,Eigen::VectorXd>& sol: solutions)
           {
-            if ((sol-js).norm()<TOLERANCE)
+            if ((sol.second-js).norm()<TOLERANCE)
             {
               is_diff=false;
               break;
@@ -359,7 +389,7 @@ namespace pickplace
           }
           if (is_diff)
           {
-            solutions.push_back(js);
+            solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
             found=true;
           }
         }
@@ -370,7 +400,12 @@ namespace pickplace
       }
     }
 
-    sols=solutions;
+    sols.clear();
+    for (const std::pair<double,Eigen::VectorXd>& sol: solutions)
+    {
+      sols.push_back(sol.second);
+    }
+
     return found;
   }
 
@@ -379,12 +414,7 @@ namespace pickplace
     m_T_w_s=m_T_w_f;
     m_T_w_s.translation()(0)=m_T_w_f.translation()(0)+m_indexes.at(0)*m_gaps(0);
     m_T_w_s.translation()(1)=m_T_w_f.translation()(1)+m_indexes.at(1)*m_gaps(1);
-    if (std::floor(m_approach_distance(2)/m_gaps(2))<(int)m_indexes.at(2))
-    {
-      ROS_ERROR("approach distance is smaller than the desider position");
-      return false;
-    }
-    m_T_w_s.translation()(2)=m_T_w_f.translation()(2)+m_approach_distance(2);
+    m_T_w_s.translation()(2)=m_T_w_f.translation()(2)+m_indexes.at(2)*m_gaps(2);
     sols=m_approach_sols;
     return ik(m_T_w_s,sols);
   }
@@ -392,10 +422,16 @@ namespace pickplace
   bool OutboundPallet::ikForTheApproachSlot(std::vector<Eigen::VectorXd >& sols)
   {
     m_T_w_as=m_T_w_f;
-    for (unsigned int idx=0;idx<3;idx++)
+    m_T_w_as.translation()(0)=m_T_w_f.translation()(0)+m_indexes.at(0)*m_gaps(0);
+    m_T_w_as.translation()(1)=m_T_w_f.translation()(1)+m_indexes.at(1)*m_gaps(1);
+    m_T_w_as.translation()(2)=m_T_w_f.translation()(2)+m_indexes.at(2)*m_gaps(2);
+    if (std::floor(m_approach_distance(2)/m_gaps(2))<(int)m_indexes.at(2))
     {
-      m_T_w_as.translation()(idx)=m_T_w_f.translation()(idx)+m_approach_distance(idx)+m_indexes.at(idx)*m_gaps(idx);
+      ROS_ERROR("approach distance is smaller than the desider position");
+      return false;
     }
+    m_T_w_as.translation()(2)=m_T_w_f.translation()(2)+m_approach_distance(2);
+
     sols=m_approach_sols;
     return ik(m_T_w_as,sols);
   }
@@ -415,7 +451,7 @@ namespace pickplace
     planning_interface::MotionPlanResponse res;
     req.group_name=m_group_name;
     req.start_state=plan.start_state_;
-
+    req.allowed_planning_time=5;
     robot_state::RobotState goal_state(m_kinematic_model);
 
     for (const Eigen::VectorXd goal: m_approach_sols)
@@ -456,7 +492,7 @@ namespace pickplace
     planning_interface::MotionPlanResponse res;
     req.group_name=m_group_name;
     req.start_state=plan.start_state_;
-
+    req.allowed_planning_time=5;
     robot_state::RobotState goal_state(m_kinematic_model);
 
     std::vector<Eigen::VectorXd> sols;
@@ -506,7 +542,7 @@ namespace pickplace
     planning_interface::MotionPlanResponse res;
     req.group_name=m_group_name;
     req.start_state=plan.start_state_;
-
+    req.allowed_planning_time=5;
     robot_state::RobotState goal_state(m_kinematic_model);
 
     std::vector<Eigen::VectorXd> sols;
@@ -557,7 +593,7 @@ namespace pickplace
     planning_interface::MotionPlanResponse res;
     req.group_name=m_group_name;
     req.start_state=plan.start_state_;
-
+    req.allowed_planning_time=5;
     robot_state::RobotState goal_state(m_kinematic_model);
 
     goal_state.setJointGroupPositions(m_jmg, approach_jconf);
