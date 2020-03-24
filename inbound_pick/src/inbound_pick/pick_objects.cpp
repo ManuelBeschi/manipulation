@@ -103,6 +103,59 @@ bool PickObjects::addBoxCb(manipulation_msgs::AddBox::Request &req, manipulation
 }
 
 
+
+
+moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproachSlot(const Eigen::VectorXd& starting_jconf, moveit::planning_interface::MoveItErrorCode& result, Eigen::VectorXd& slot_jconf)
+{
+  moveit::planning_interface::MoveGroupInterface::Plan plan;
+
+  robot_state::RobotState state = *m_group->getCurrentState();
+  state.setJointGroupPositions(m_jmg,starting_jconf);
+  moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
+
+  planning_interface::MotionPlanRequest req;
+  planning_interface::MotionPlanResponse res;
+  req.group_name=m_group_name;
+  req.start_state=plan.start_state_;
+  req.allowed_planning_time=5;
+  robot_state::RobotState goal_state(m_kinematic_model);
+
+  std::vector<Eigen::VectorXd> sols;
+  if (!ikForTheApproachSlot(sols))
+  {
+    ROS_ERROR("No Ik solution for the slot");
+    result=moveit::planning_interface::MoveItErrorCode::GOAL_IN_COLLISION;
+    return plan;
+  }
+
+  for (const Eigen::VectorXd& goal: sols)
+  {
+
+    goal_state.setJointGroupPositions(m_jmg, goal);
+    moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, m_jmg);
+    req.goal_constraints.push_back(joint_goal);
+
+  }
+  ROS_PROTO("Found %zu solution",sols.size());
+
+  if (!m_planning_pipeline->generatePlan(m_planning_scene, req, res))
+  {
+    ROS_ERROR("Could not compute plan successfully");
+    result= res.error_code_;
+    return plan;
+  }
+  plan.planning_time_=res.planning_time_;
+
+  res.trajectory_->getRobotTrajectoryMsg(plan.trajectory_);
+
+  res.trajectory_->getLastWayPoint().copyJointGroupPositions(m_jmg,slot_jconf);
+  result= res.error_code_;
+
+  return plan;
+}
+
+
+
 void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConstPtr &goal)
 {
 
@@ -214,13 +267,14 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     m_as->setAborted(action_res,"error in planning back to box");
     return;
   }
+    wait();
+    tf::poseEigenToMsg(selected_box->getApproachPose(),target.pose);
+    m_target_pub.publish(target);
+    execute(return_plan);
+
   if (!selected_box->removeObject(selected_object->getId()))
     ROS_WARN("unable to remove object");
 
-  wait();
-  tf::poseEigenToMsg(selected_box->getApproachPose(),target.pose);
-  m_target_pub.publish(target);
-  execute(return_plan);
   action_res.object_type=selected_object->getType();
   action_res.object_id=selected_object->getId();
   action_res.result=manipulation_msgs::PickObjectsResult::Success;
