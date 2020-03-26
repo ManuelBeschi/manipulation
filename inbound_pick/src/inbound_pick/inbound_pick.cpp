@@ -17,6 +17,30 @@ Object::Object(const std::string &type):
 }
 
 
+
+void Object::add(const std::string& group_name, const GraspPosePtr& grasp_pose)
+{
+  if (m_grasp_poses.find(group_name)!=m_grasp_poses.end())
+  {
+    ROS_FATAL("add grasp pose for object %s id %s and group %s",m_type.c_str(),m_id.c_str(),group_name.c_str());
+    m_grasp_poses.at(group_name).push_back(grasp_pose);
+  }
+  else
+  {
+    ROS_FATAL("add first grasp pose for object %s id %s and group %s",m_type.c_str(),m_id.c_str(),group_name.c_str());
+    std::vector<GraspPosePtr> v;
+    v.push_back(grasp_pose);
+    m_grasp_poses.insert(std::pair<std::string,std::vector<GraspPosePtr>>(group_name,v));
+  }
+}
+std::vector<GraspPosePtr> Object::getGraspPoses(const std::string& group_name)
+{
+  assert(m_grasp_poses.find(group_name)!=m_grasp_poses.end());
+  ROS_FATAL("there are %zu grasp poses for object %s id %s and group %s",m_grasp_poses.at(group_name).size(),m_type.c_str(),m_id.c_str(),group_name.c_str());
+
+  return m_grasp_poses.at(group_name);
+}
+
 InboundBox::InboundBox(const std::string &name, const Eigen::Affine3d T_w_box, const double& height):
   m_name(name),
   m_T_w_box(T_w_box),
@@ -139,13 +163,37 @@ std::vector<ObjectPtr> InboundBox::getAllObjects()
   return objects;
 }
 
+void InboundBox::setConfigurations(const std::string& group_name, const std::vector<Eigen::VectorXd >& sols)
+{
+  std::map<std::string, std::vector<Eigen::VectorXd >>::iterator it=m_jconfs.find(group_name);
+  if (it!=m_jconfs.end())
+  {
+    it->second=sols;
+  }
+  else
+  {
+    m_jconfs.insert(std::pair<std::string,std::vector<Eigen::VectorXd >>(group_name,sols));
+  }
+}
+std::vector<Eigen::VectorXd > InboundBox::getConfigurations(const std::string& group_name)
+{
+  assert(m_jconfs.find(group_name)!=m_jconfs.end());
+  return m_jconfs.at(group_name);
+}
+
+
 std::ostream& operator<<  (std::ostream&os, const InboundBox& box)
 {
   os  << std::endl << "box name = " << box.m_name << std::endl;
   os << "box poses number = " << box.m_jconfs.size() << std::endl;
-  for (const Eigen::VectorXd& jconf: box.m_jconfs)
+
+  for (const std::pair<std::string,std::vector<Eigen::VectorXd >>& p: box.m_jconfs)
   {
-    os << "configuration = " <<jconf.transpose() << std::endl;
+    os << " group = " << p.first << std::endl;
+    for (const Eigen::VectorXd& jconf: p.second)
+    {
+      os << "configuration = " <<jconf.transpose() << std::endl;
+    }
   }
   os << "list of objects: " << std::endl;
   for (const std::pair<std::string,ObjectPtr> obj: box.m_objects)

@@ -1,5 +1,5 @@
 #include <ros/ros.h>
-#include <outbound_place/outbound_place.h>
+#include <outbound_place/outbound_pallet.h>
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "outbound_pallet");

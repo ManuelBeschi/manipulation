@@ -57,15 +57,15 @@ class Object {
 protected:
   std::string m_type;
   std::string m_id;
-  std::vector<GraspPosePtr> m_grasp_poses;
+  std::map<std::string,std::vector<GraspPosePtr>> m_grasp_poses;
 public:
   Object(const std::string& type);
 
   std::string getType(){return m_type;}
   std::string getId(){return m_id;}
   void setId(const std::string& id){m_id=id;}
-  void add(const GraspPosePtr& grasp_pose){m_grasp_poses.push_back(grasp_pose);}
-  std::vector<GraspPosePtr> getGraspPoses(){return m_grasp_poses;}
+  void add(const std::string& group_name, const GraspPosePtr& grasp_pose);
+  std::vector<GraspPosePtr> getGraspPoses(const std::string& group_name);
 };
 
 typedef std::shared_ptr<Object> ObjectPtr;
@@ -76,7 +76,7 @@ protected:
   std::map<std::string,std::vector<std::string>> m_ids_by_type;
   std::map<std::string,ObjectPtr> m_objects;
   std::string m_name;
-  std::vector<Eigen::VectorXd > m_jconfs;
+  std::map<std::string, std::vector<Eigen::VectorXd >> m_jconfs;
   Eigen::Affine3d m_T_w_box;
   Eigen::Affine3d m_T_w_box_a;
   double m_height;
@@ -120,12 +120,13 @@ public:
   std::vector<ObjectPtr> getAllObjects();
 
 
-  void setConfigurations(const std::vector<Eigen::VectorXd >& sols){m_jconfs=sols;}
-  std::vector<Eigen::VectorXd > getConfigurations(){return m_jconfs;}
+  void setConfigurations(const std::string& group_name, const std::vector<Eigen::VectorXd >& sols);
+  std::vector<Eigen::VectorXd > getConfigurations(const std::string& group_name);
 
   Eigen::Affine3d getPose(){return m_T_w_box;}
   Eigen::Affine3d getApproachPose(){return m_T_w_box_a;}
 
+  const double& getHeight(){return m_height;}
 
   friend std::ostream& operator<<  (std::ostream& os, const InboundBox& box);
 

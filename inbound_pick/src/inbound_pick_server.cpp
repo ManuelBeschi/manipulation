@@ -8,10 +8,17 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "inbound_server");
   ros::NodeHandle nh;
-  ros::AsyncSpinner spinner(10);
+  ros::NodeHandle pnh("~");
+  ros::AsyncSpinner spinner(4);
   spinner.start();
 
-  pickplace::PickObjects pick("ur5_on_guide");
+  pickplace::PickObjects pick(nh,pnh);
+
+  if (!pick.init())
+  {
+    ROS_ERROR_NAMED(nh.getNamespace(),"unable to load parameters for node %s",pnh.getNamespace().c_str());
+    return -1;
+  }
 
   ros::Rate lp(10);
   while (ros::ok())

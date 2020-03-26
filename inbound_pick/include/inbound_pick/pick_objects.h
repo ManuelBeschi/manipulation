@@ -51,7 +51,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <object_loader_msgs/attachObject.h>
 #include <object_loader_msgs/detachObject.h>
 
-#define N_ITER 20
+#define N_MAX_ITER 40
+#define N_TRIAL 20
 #define TOLERANCE 1e-6
 
 
@@ -68,49 +69,76 @@ class PickObjects
 
 protected:
   std::map<std::string,InboundBoxPtr> m_boxes;
-  moveit::planning_interface::MoveGroupInterfacePtr m_group;
+
   std::shared_ptr<planning_scene::PlanningScene> m_planning_scene;
   robot_model::RobotModelPtr m_kinematic_model;
-  moveit::core::JointModelGroup* m_jmg;
-  std::string m_group_name;
-  std::string tool_name="tip";
-  std::string world_frame="world";
-
   planning_pipeline::PlanningPipelinePtr m_planning_pipeline;
   std::string m_planner_plugin_name;
+  std::vector<std::string> m_request_adapters;
+
+
+  ros::NodeHandle m_nh;
+  ros::NodeHandle m_pnh;
+
+  std::vector<std::string> m_group_names;
+  std::map<std::string,moveit::planning_interface::MoveGroupInterfacePtr> m_groups;
+  std::map<std::string,moveit::core::JointModelGroup*> m_joint_models;
+  std::map<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>>> m_pick_servers;
+  std::map<std::string,std::string> m_tool_names;
+  std::string world_frame="world";
+
 
   ros::ServiceServer m_add_obj_srv;
   ros::ServiceServer m_add_box_srv;
   ros::ServiceServer m_list_objects_srv;
   ros::ServiceClient m_grasp_srv;
-
   ros::ServiceClient m_attach_obj_;
-  Eigen::Affine3d m_T_w_as; // world <- approach to slot
-  Eigen::Affine3d m_T_w_s; // world <- slot
-
-  std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> m_as;
   ros::Publisher m_target_pub;
 
-  bool ikForTheSlot(std::vector<Eigen::VectorXd >& sols);
-
-//  moveit::planning_interface::MoveGroupInterface::Plan planToApproachSlot(const Eigen::VectorXd& starting_jconf,
-//                                                                          moveit::planning_interface::MoveItErrorCode& result, Eigen::VectorXd& slot_jconf);
+  Eigen::Affine3d m_T_w_as; // world <- approach to slot
+  Eigen::Affine3d m_T_w_s;  // world <- slot
 
 
-
-  ros::NodeHandle m_nh;
-  void addInboundBox(const InboundBoxPtr& box);
-  bool ik(Eigen::Affine3d T_w_a, std::vector<Eigen::VectorXd >& sols, unsigned int ntrial=N_ITER);
+  bool ik(const std::string& group_name,
+          Eigen::Affine3d T_w_a, std::vector<Eigen::VectorXd >& sols, unsigned int ntrial=N_TRIAL);
 
 
-public:
-  PickObjects(const std::string& group_name);
+
+  std::map<std::string,InboundBoxPtr> searchBoxWithType(const std::string& type_name);
+  std::map<std::string,InboundBoxPtr> searchBoxWithTypes(const std::vector<std::string>& type_names);
+
+  moveit::planning_interface::MoveGroupInterface::Plan planToApproachSlot(const std::string& group_name,
+                                                                          const Eigen::VectorXd& starting_jconf,
+                                                                          const Eigen::Affine3d& approach_pose,
+                                                                          moveit::planning_interface::MoveItErrorCode& result,
+                                                                          Eigen::VectorXd& slot_jconf);
+
+  moveit::planning_interface::MoveGroupInterface::Plan planToBestBox(const std::string& group_name,
+                                                                     const std::map<std::string,InboundBoxPtr>& possible_boxes,
+                                                                     moveit::planning_interface::MoveItErrorCode& result,
+                                                                     InboundBoxPtr& selected_box,
+                                                                     Eigen::VectorXd& jconf);
+
+
+  moveit::planning_interface::MoveGroupInterface::Plan planToObject(const std::string& group_name,
+                                                                    const std::vector<std::string>& type_name,
+                                                                    const InboundBoxPtr& selected_box,
+                                                                    const Eigen::VectorXd& starting_jconf,
+                                                                    const std::string& tool_name,
+                                                                    moveit::planning_interface::MoveItErrorCode& result,
+                                                                    ObjectPtr& selected_object,
+                                                                    GraspPosePtr& selected_grasp_pose
+                                                                    );
+
 
   /* return false if already present
    */
-  bool createInboundBox(const std::string& box_name, const Eigen::Affine3d& T_w_box, const double heigth);
+  bool createInboundBox(const std::string& box_name,
+                        const Eigen::Affine3d& T_w_box,
+                        const double heigth);
 
   std::map<std::string,InboundBoxPtr>::iterator findBox(const std::string& box_name);
+
   /* return false if box does not exist
    */
   bool removeInboundBox(const std::string& box_name);
@@ -121,6 +149,18 @@ public:
 
   bool removeObject(const std::string& type,
                     const std::string& box_name);
+
+
+  moveit::planning_interface::MoveItErrorCode execute(const std::string& group_name,
+                                                      const moveit::planning_interface::MoveGroupInterface::Plan& plan);
+  void wait();
+
+public:
+  PickObjects(const ros::NodeHandle& nh,
+              const ros::NodeHandle& pnh);
+
+  bool init();
+
   bool addObjectCb(manipulation_msgs::AddObjects::Request& req,
                     manipulation_msgs::AddObjects::Response& res);
   bool addBoxCb(manipulation_msgs::AddBox::Request& req,
@@ -128,38 +168,8 @@ public:
   bool listObjects(manipulation_msgs::ListOfObjects::Request& req,
                    manipulation_msgs::ListOfObjects::Response& res);
 
-  void pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConstPtr& goal);
-
-
-
-  std::map<std::string,InboundBoxPtr> searchBoxWithType(const std::string& type_name);
-  std::map<std::string,InboundBoxPtr> searchBoxWithTypes(const std::vector<std::string>& type_names);
-
-  moveit::planning_interface::MoveGroupInterface::Plan planToBestBox(const std::map<std::string,InboundBoxPtr>& possible_boxes,
-                                                                     moveit::planning_interface::MoveItErrorCode& result,
-                                                                     InboundBoxPtr& selected_box,
-                                                                     Eigen::VectorXd& jconf);
-
-
-  moveit::planning_interface::MoveGroupInterface::Plan planToObject(const std::vector<std::string>& type_name,
-                                                                    const InboundBoxPtr& selected_box,
-                                                                    const Eigen::VectorXd& starting_jconf,
-                                                                    const std::string& tool_name,
-                                                                    moveit::planning_interface::MoveItErrorCode& result,
-                                                                    ObjectPtr& selected_object,
-                                                                    GraspPosePtr& selected_grasp_pose
-                                                                    );
-
-  moveit::planning_interface::MoveGroupInterface::Plan planToReturnToApproach(const std::vector<std::string>& type_name,
-                                                                              const InboundBoxPtr& selected_box,
-                                                                              const Eigen::VectorXd& approach_jconf,
-                                                                              const GraspPosePtr& selected_grasp_pose,
-                                                                              moveit::planning_interface::MoveItErrorCode& result
-                                                                              );
-
-
-  moveit::planning_interface::MoveItErrorCode execute(const moveit::planning_interface::MoveGroupInterface::Plan& plan);
-  void wait();
+  void pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConstPtr& goal,
+                        const std::string& group_name);
 
   friend std::ostream& operator<<  (std::ostream& os, const PickObjects& pick_objs);
 

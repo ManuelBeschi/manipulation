@@ -126,8 +126,7 @@ public:
                                                                   moveit::planning_interface::MoveItErrorCode& result,
                                                                   Eigen::VectorXd& slot_jconf);
 
-  moveit::planning_interface::MoveGroupInterface::Plan planToApproachSlot(const Eigen::VectorXd& starting_jconf,
-                                                                  moveit::planning_interface::MoveItErrorCode& result,
+  moveit::planning_interface::MoveGroupInterface::Plan planToApproachSlot(moveit::planning_interface::MoveItErrorCode& result,
                                                                   Eigen::VectorXd& slot_jconf);
 
 

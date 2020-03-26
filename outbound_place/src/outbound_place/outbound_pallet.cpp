@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
-#include <outbound_place/outbound_place.h>
+#include <outbound_place/outbound_pallet.h>
 
 
 namespace pickplace
@@ -207,32 +207,34 @@ namespace pickplace
       return;
     }
 
-    ROS_PROTO("plannig to approach");
 
-    Eigen::VectorXd approach_jconf;
-    moveit::planning_interface::MoveGroupInterface::Plan plan=planToApproach(result,approach_jconf);
-
-
-    if (!result)
-    {
-      action_res.result=manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
-      ROS_ERROR("error in plan to approach place pose, code = %d",result.val);
-      m_as->setAborted(action_res,"error in planning to pallet");
-      return;
-    }
-    ROS_PROTO("plan to approach in %f second",plan.planning_time_);
 
     geometry_msgs::PoseStamped target;
     target.header.frame_id="world";
     target.header.stamp=ros::Time::now();
-    tf::poseEigenToMsg(m_T_w_a,target.pose);
-    m_target_pub.publish(target);
-    execute(plan);
+
+    ROS_PROTO("plannig to approach");
+
+//    Eigen::VectorXd approach_jconf;
+//    moveit::planning_interface::MoveGroupInterface::Plan plan=planToApproach(result,approach_jconf);
+
+
+//    if (!result)
+//    {
+//      action_res.result=manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
+//      ROS_ERROR("error in plan to approach place pose, code = %d",result.val);
+//      m_as->setAborted(action_res,"error in planning to pallet");
+//      return;
+//    }
+//    ROS_PROTO("plan to approach in %f second",plan.planning_time_);
+
+//    tf::poseEigenToMsg(m_T_w_a,target.pose);
+//    m_target_pub.publish(target);
+//    execute(plan);
 
 
     Eigen::VectorXd approach_slot_jconf;
-    moveit::planning_interface::MoveGroupInterface::Plan approac_pick_plan=planToApproachSlot(approach_jconf,
-                                                                                              result,
+    moveit::planning_interface::MoveGroupInterface::Plan approac_pick_plan=planToApproachSlot(result,
                                                                                               approach_slot_jconf);
 
     if (!result)
@@ -274,12 +276,14 @@ namespace pickplace
     detach_srv.request.obj_id=goal->object_id;
     if (!m_detach_object_srv.call(detach_srv))
     {
+      action_res.result=manipulation_msgs::PlaceObjectsResult::SceneError;
       ROS_ERROR("unaspected error calling %s service",m_detach_object_srv.getService().c_str());
       m_as->setAborted(action_res,"unaspected error calling detach server");
       return;
     }
     if (!detach_srv.response.success)
     {
+      action_res.result=manipulation_msgs::PlaceObjectsResult::SceneError;
       ROS_ERROR("unable to detach object id %s",goal->object_id.c_str());
       m_as->setAborted(action_res,"unable to attach object");
       return;
@@ -299,8 +303,7 @@ namespace pickplace
 //                                                                                            );
 
 
-    moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(slot_jconf,
-                                                                                        result,
+    moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(result,
                                                                                         approach_slot_jconf);
 
     if (!result)
@@ -530,12 +533,12 @@ namespace pickplace
   }
 
 
-  moveit::planning_interface::MoveGroupInterface::Plan OutboundPallet::planToApproachSlot(const Eigen::VectorXd& starting_jconf, moveit::planning_interface::MoveItErrorCode& result, Eigen::VectorXd& slot_jconf)
+  moveit::planning_interface::MoveGroupInterface::Plan OutboundPallet::planToApproachSlot(moveit::planning_interface::MoveItErrorCode& result,
+                                                                                          Eigen::VectorXd& slot_jconf)
   {
     moveit::planning_interface::MoveGroupInterface::Plan plan;
 
     robot_state::RobotState state = *m_group->getCurrentState();
-    state.setJointGroupPositions(m_jmg,starting_jconf);
     moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
 
     planning_interface::MotionPlanRequest req;

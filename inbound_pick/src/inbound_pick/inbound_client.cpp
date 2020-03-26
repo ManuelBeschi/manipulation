@@ -193,6 +193,10 @@ bool InboundFromParam::readObjectFromParam()
   }
   ROS_DEBUG("there are %zu objects",config.size());
 
+
+  object_loader_msgs::addObjects srv;
+  manipulation_msgs::AddObjects add_objs_srv;
+
   for(size_t i=0; i < config.size(); i++)
   {
     XmlRpc::XmlRpcValue object = config[i];
@@ -223,7 +227,6 @@ bool InboundFromParam::readObjectFromParam()
     std::string box_name=rosparam_utilities::toString(object["inbound"]);
 
 
-    manipulation_msgs::AddObjects add_objs_srv;
     add_objs_srv.request.inbound_box_name=box_name;
     manipulation_msgs::Object obj;
     obj.type=type;
@@ -365,31 +368,34 @@ bool InboundFromParam::readObjectFromParam()
 
 
 
-    object_loader_msgs::addObjects srv;
     object_loader_msgs::object col_obj;
     tf::poseEigenToMsg(T_w_object,col_obj.pose.pose);
     col_obj.pose.header.frame_id="world";
     col_obj.object_type=type;
     srv.request.objects.push_back(col_obj);
-    if (!add_col_objs_client_.call(srv))
-    {
-      ROS_ERROR("sometimes wrong when adding collision object");
-      continue;
-    }
 
-    if (!srv.response.success)
-    {
-      ROS_ERROR("sometimes wrong when adding collision object");
-      continue;
-    }
-    obj.id=srv.response.ids.at(0);
+
     add_objs_srv.request.add_objects.push_back(obj);
-    add_objs_client_.call(add_objs_srv);
 
 
 
   }
 
+  if (!add_col_objs_client_.call(srv))
+  {
+    ROS_ERROR("sometimes wrong when adding collision object");
+    return false;
+  }
+  if (!srv.response.success)
+  {
+    ROS_ERROR("sometimes wrong when adding collision object");
+    return false;
+  }
+  assert(srv.response.ids.size()==add_objs_srv.request.add_objects.size());
+  for (size_t idx=0;idx<srv.response.ids.size();idx++)
+    add_objs_srv.request.add_objects.at(idx).id=srv.response.ids.at(idx);
+
+  add_objs_client_.call(add_objs_srv);
 
   return true;
 }
