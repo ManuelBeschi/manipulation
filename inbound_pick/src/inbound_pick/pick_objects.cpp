@@ -406,7 +406,7 @@ ObjectPtr PickObjects::createObject(const std::string& type,
         continue;
 
       std::vector<Eigen::VectorXd> sols=box->getConfigurations(group_name);
-      if (ik(group_name,pose.second,sols))
+      if (ik(group_name,pose.second,sols,sols.size()))
       {
         for (const Eigen::VectorXd sol: sols)
         {

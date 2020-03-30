@@ -53,7 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <object_loader_msgs/detachObject.h>
 #include <tf/transform_listener.h>
 #include <tf_conversions/tf_eigen.h>
-#define N_ITER 200
+#define N_ITER 40
 #define TOLERANCE 1e-6
 
 
