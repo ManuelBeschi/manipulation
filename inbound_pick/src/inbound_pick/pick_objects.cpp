@@ -17,13 +17,12 @@ bool PickObjects::init()
   m_kinematic_model = robot_model_loader.getModel();
   m_planning_scene=std::make_shared<planning_scene::PlanningScene>(m_kinematic_model);
 
-
   m_planner_plugin_name= "ha_planner/DgacoPlannerManager";
   if (!m_pnh.getParam("planning_plugin", m_planner_plugin_name))
     ROS_ERROR_STREAM("Could not find planner plugin name");
 
   if (!m_pnh.getParam("request_adapters", m_request_adapters))
-    ROS_ERROR_STREAM("Could not find request_adapters in namespace " << m_nh.getNamespace());
+    ROS_ERROR_STREAM("Could not find request_adapters in namespace " << m_pnh.getNamespace());
   m_planning_pipeline=std::make_shared<planning_pipeline::PlanningPipeline>(m_kinematic_model, m_nh, m_planner_plugin_name, m_request_adapters);
 
   if (!m_pnh.getParam("groups",m_tool_names))
