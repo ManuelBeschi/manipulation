@@ -39,6 +39,8 @@ bool PickObjects::init()
   // create groups
   for (const std::string& group_name: m_group_names)
   {
+
+
     moveit::planning_interface::MoveGroupInterfacePtr group=std::make_shared<moveit::planning_interface::MoveGroupInterface>(group_name);
     if (!group->startStateMonitor(3))
     {
@@ -48,8 +50,50 @@ bool PickObjects::init()
     group->setStartState(*group->getCurrentState());
     m_groups.insert(std::pair<std::string,moveit::planning_interface::MoveGroupInterfacePtr>(group_name,group));
 
+
     moveit::core::JointModelGroup* jmg = m_kinematic_model->getJointModelGroup(group_name);
     m_joint_models.insert(std::pair<std::string,moveit::core::JointModelGroup*>(group_name,jmg));
+
+    size_t n_joints=jmg->getActiveJointModelNames().size();
+    std::vector<double> tmp;
+    if (m_pnh.getParam(group_name+"/preferred_configuration",tmp))
+    {
+      assert(tmp.size()==n_joints);
+      Eigen::VectorXd preferred_position(n_joints);
+      for (size_t idof=0;idof<n_joints;idof++)
+        preferred_position(idof)=tmp.at(idof);
+
+      ROS_INFO_STREAM("preferred configuration of "<<group_name<<" is " << preferred_position.transpose());
+      m_preferred_configuration.insert(std::pair<std::string,Eigen::VectorXd>(group_name,preferred_position));
+      if (m_pnh.getParam(group_name+"/preferred_configuration_weight",tmp))
+      {
+        assert(tmp.size()==n_joints);
+        Eigen::VectorXd preferred_position_weight(n_joints);
+        for (size_t idof=0;idof<n_joints;idof++)
+          preferred_position_weight(idof)=tmp.at(idof);
+        ROS_INFO_STREAM("preferred configuration weight of "<<group_name<<" is " << preferred_position_weight.transpose());
+
+        m_preferred_configuration_weight.insert(std::pair<std::string,Eigen::VectorXd>(group_name,preferred_position_weight));
+      }
+      else
+      {
+        Eigen::VectorXd preferred_position_weight(n_joints,1);
+        ROS_INFO_STREAM("preferred configuration weight of "<<group_name<<" is " << preferred_position_weight.transpose());
+        m_preferred_configuration_weight.insert(std::pair<std::string,Eigen::VectorXd>(group_name,preferred_position_weight));
+      }
+    }
+    else
+    {
+      ROS_WARN("no preferred configuration for group %s",group_name.c_str());
+      ROS_WARN("to do it set parameters %s/%s/preferred_configuration and %s/%s/preferred_configuration_weight",m_pnh.getNamespace().c_str(),group_name.c_str(),m_pnh.getNamespace().c_str(),group_name.c_str());
+    }
+
+    int max_ik_goal_number;
+    if (!m_pnh.getParam(group_name+"/max_ik_goal_number",max_ik_goal_number))
+    {
+      max_ik_goal_number=N_TRIAL;
+    }
+    m_max_ik_goal_number.insert(std::pair<std::string,int>(group_name,max_ik_goal_number));
 
     std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> as;
     as.reset(new actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>(m_nh,group_name+"/pick",
@@ -58,6 +102,11 @@ bool PickObjects::init()
     as->start();
     m_pick_servers.insert(std::pair<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>>>(group_name,as));
 
+    std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>> fjt_ac;
+    fjt_ac.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>("/"+group_name+"/follow_joint_trajectory",true));
+    m_fjt_clients.insert(std::pair<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>>(group_name,fjt_ac));
+
+    m_fjt_result.insert(std::pair<std::string,double>(group_name,0));
   }
 
   m_add_obj_srv=m_nh.advertiseService("add_objects",&PickObjects::addObjectCb,this);
@@ -139,7 +188,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
   moveit::planning_interface::MoveGroupInterface::Plan plan;
   moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
   moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
-
+  int max_ik_goal_number=m_max_ik_goal_number.at(group_name);
   robot_state::RobotState state = *group->getCurrentState();
   state.setJointGroupPositions(jmg,starting_jconf);
   moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
@@ -161,8 +210,12 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
 
   for (const Eigen::VectorXd& goal: sols)
   {
-
+    if (req.goal_constraints.size()>=max_ik_goal_number)
+      break;
     goal_state.setJointGroupPositions(jmg, goal);
+    goal_state.updateCollisionBodyTransforms();
+    if (!m_planning_scene->isStateValid(goal_state))
+      continue;
     moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
     req.goal_constraints.push_back(joint_goal);
 
@@ -214,6 +267,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
                                                                           approach_jconf);
 
 
+
   if (!result)
   {
     action_res.result=manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
@@ -252,13 +306,26 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     return;
   }
 
-  wait();
+  if (!wait(group_name))
+  {
+    action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
+    ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+    as->setAborted(action_res,"error in trajectory execution");
+    return;
+  }
 
   tf::poseEigenToMsg(selected_grasp_pose->getPose(),target.pose);
   m_target_pub.publish(target);
   execute(group_name,
           pick_plan);
-  wait();
+
+  if (!wait(group_name))
+  {
+    action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
+    ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+    as->setAborted(action_res,"error in trajectory execution");
+    return;
+  }
 
   ros::Duration(0.5).sleep();
 
@@ -290,6 +357,8 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
   Eigen::Affine3d T_w_approach=selected_grasp_pose->getPose();
   T_w_approach.translation()(2)+=selected_box->getHeight();
 
+  if (!selected_box->removeObject(selected_object->getId()))
+    ROS_WARN("unable to remove object");
 
 
   moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(group_name,
@@ -306,15 +375,26 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     as->setAborted(action_res,"error in planning back to box");
     return;
   }
-  wait();
+  if (!wait(group_name))
+  {
+    action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
+    ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+    as->setAborted(action_res,"error in trajectory execution");
+    return;
+  }
   tf::poseEigenToMsg(T_w_approach,target.pose);
   m_target_pub.publish(target);
   execute(group_name,
           return_plan);
 
-  if (!selected_box->removeObject(selected_object->getId()))
-    ROS_WARN("unable to remove object");
 
+  if (!wait(group_name))
+  {
+    action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
+    ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+    as->setAborted(action_res,"error in trajectory execution");
+    return;
+  }
   action_res.object_type=selected_object->getType();
   action_res.object_id=selected_object->getId();
   action_res.result=manipulation_msgs::PickObjectsResult::Success;
@@ -456,8 +536,20 @@ bool PickObjects::ik(const std::string& group_name, Eigen::Affine3d T_w_a, std::
   moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
   moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
   robot_state::RobotState state = *group->getCurrentState();
-  Eigen::VectorXd actual_configuration;
-  state.copyJointGroupPositions(group_name,actual_configuration);
+
+  Eigen::VectorXd preferred_configuration(jmg->getActiveJointModels().size());
+  Eigen::VectorXd preferred_configuration_weight(jmg->getActiveJointModels().size(),1);
+
+  if (m_preferred_configuration.count(group_name)>0)
+  {
+    preferred_configuration=m_preferred_configuration.at(group_name);
+    preferred_configuration_weight=m_preferred_configuration_weight.at(group_name);
+  }
+  else
+  {
+    state.copyJointGroupPositions(group_name,preferred_configuration);
+  }
+
   unsigned int n_seed=sols.size();
   bool found=false;
 
@@ -481,9 +573,11 @@ bool PickObjects::ik(const std::string& group_name, Eigen::Affine3d T_w_a, std::
 
     if (state.setFromIK(jmg,(Eigen::Isometry3d)T_w_a.matrix()))
     {
+      if (!state.satisfiesBounds())
+        continue;
       Eigen::VectorXd js;
       state.copyJointGroupPositions(group_name,js);
-      double dist=(js-actual_configuration).norm();
+      double dist=(preferred_configuration_weight.cwiseProduct(js-preferred_configuration)).norm();
       if (solutions.size()==0)
       {
         solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
@@ -532,6 +626,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
   moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
   moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
   robot_state::RobotState state = *group->getCurrentState();
+  int max_ik_goal_number=m_max_ik_goal_number.at(group_name);
   //  m_planning_scene->getCurrentState()
 
   moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
@@ -551,9 +646,15 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
   {
     std::vector<Eigen::VectorXd> box_goals=box.second->getConfigurations(group_name);
     ROS_PROTO("box %s has %zu configuration",box.first.c_str(),box_goals.size());
+    int ik_goal=0;
     for (const Eigen::VectorXd& goal: box_goals)
     {
+      if (ik_goal++>=max_ik_goal_number)
+        break;
       goal_state.setJointGroupPositions(jmg, goal);
+      goal_state.updateCollisionBodyTransforms();
+      if (!m_planning_scene->isStateValid(goal_state))
+        continue;
       moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
       req.goal_constraints.push_back(joint_goal);
     }
@@ -617,6 +718,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
   moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
   ROS_PROTO("possible object %zu", objects.size());
   moveit::planning_interface::MoveGroupInterface::Plan plan;
+  int max_ik_goal_number=m_max_ik_goal_number.at(group_name);
 
   if (objects.size()==0)
   {
@@ -637,14 +739,20 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
 
   for (const ObjectPtr& obj: objects)
   {
-
+    int ik_goal=0;
     for (const GraspPosePtr& grasp_pose: obj->getGraspPoses(group_name))
     {
       if (!grasp_pose->getToolName().compare(tool_name))
       {
         goal_state.setJointGroupPositions(jmg, grasp_pose->getConfiguration());
+        goal_state.updateCollisionBodyTransforms();
+        if (!m_planning_scene->isStateValid(goal_state))
+          continue;
         moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
         req.goal_constraints.push_back(joint_goal);
+        if (ik_goal++>=max_ik_goal_number)
+          break;
+
       }
     }
   }
@@ -670,7 +778,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
     {
       if ((grasp_pose->getConfiguration()-jconf).norm()<TOLERANCE)
       {
-        ROS_INFO("selected object = %s, id = %s", obj->getType().c_str(),obj->getId().c_str());
+        ROS_INFO("selected object = %s, id = %s, in box %s", obj->getType().c_str(),obj->getId().c_str(),selected_box->getName().c_str());
         selected_object=obj;
         selected_grasp_pose=grasp_pose;
         found=true;
@@ -686,15 +794,36 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
 
 
 
-moveit::planning_interface::MoveItErrorCode PickObjects::execute(const std::string& group_name, const moveit::planning_interface::MoveGroupInterface::Plan& plan)
+bool PickObjects::execute(const std::string& group_name, const moveit::planning_interface::MoveGroupInterface::Plan& plan)
 {
   moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
-  return group->execute(plan);
+  control_msgs::FollowJointTrajectoryGoal goal;
+  goal.trajectory=plan.trajectory_.joint_trajectory;
+
+  auto cb=boost::bind(&pickplace::PickObjects::doneCb,this,_1,_2,group_name);
+  m_fjt_clients.at(group_name)->sendGoal(goal,
+                                         cb);
+
+  m_fjt_result.at(group_name)=std::nan("1");;
+
+  return true;
 }
 
-void  PickObjects::wait()
+void PickObjects::doneCb(const actionlib::SimpleClientGoalState &state, const control_msgs::FollowJointTrajectoryResultConstPtr &result, const std::string &group_name)
 {
+  m_fjt_result.at(group_name)=result->error_code;
+  if (result->error_code<0)
+  {
+    ROS_ERROR("error executing %s/follow_joint_trajectory: %s",group_name.c_str(),result->error_string.c_str());
+  }
+  return;
+}
 
+bool  PickObjects::wait(const std::string& group_name)
+{
+  while (std::isnan(m_fjt_result.at(group_name)))
+    ros::Duration(0.01).sleep();
+  return !std::isnan(m_fjt_result.at(group_name));
 }
 
 

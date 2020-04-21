@@ -22,12 +22,12 @@ void Object::add(const std::string& group_name, const GraspPosePtr& grasp_pose)
 {
   if (m_grasp_poses.find(group_name)!=m_grasp_poses.end())
   {
-    ROS_FATAL("add grasp pose for object %s id %s and group %s",m_type.c_str(),m_id.c_str(),group_name.c_str());
+    ROS_DEBUG("add grasp pose for object %s id %s and group %s",m_type.c_str(),m_id.c_str(),group_name.c_str());
     m_grasp_poses.at(group_name).push_back(grasp_pose);
   }
   else
   {
-    ROS_FATAL("add first grasp pose for object %s id %s and group %s",m_type.c_str(),m_id.c_str(),group_name.c_str());
+    ROS_DEBUG("add first grasp pose for object %s id %s and group %s",m_type.c_str(),m_id.c_str(),group_name.c_str());
     std::vector<GraspPosePtr> v;
     v.push_back(grasp_pose);
     m_grasp_poses.insert(std::pair<std::string,std::vector<GraspPosePtr>>(group_name,v));
@@ -36,7 +36,7 @@ void Object::add(const std::string& group_name, const GraspPosePtr& grasp_pose)
 std::vector<GraspPosePtr> Object::getGraspPoses(const std::string& group_name)
 {
   assert(m_grasp_poses.find(group_name)!=m_grasp_poses.end());
-  ROS_FATAL("there are %zu grasp poses for object %s id %s and group %s",m_grasp_poses.at(group_name).size(),m_type.c_str(),m_id.c_str(),group_name.c_str());
+  ROS_DEBUG("there are %zu grasp poses for object %s id %s and group %s",m_grasp_poses.at(group_name).size(),m_type.c_str(),m_id.c_str(),group_name.c_str());
 
   return m_grasp_poses.at(group_name);
 }

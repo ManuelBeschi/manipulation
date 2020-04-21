@@ -50,9 +50,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <std_srvs/SetBool.h>
 #include <object_loader_msgs/attachObject.h>
 #include <object_loader_msgs/detachObject.h>
+#include <control_msgs/FollowJointTrajectoryAction.h>
 
-#define N_MAX_ITER 40
-#define N_TRIAL 20
+#define N_MAX_ITER 200
+#define N_TRIAL 40
 #define TOLERANCE 1e-6
 
 
@@ -84,7 +85,11 @@ protected:
   std::map<std::string,moveit::planning_interface::MoveGroupInterfacePtr> m_groups;
   std::map<std::string,moveit::core::JointModelGroup*> m_joint_models;
   std::map<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>>> m_pick_servers;
+  std::map<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>> m_fjt_clients;
   std::map<std::string,std::string> m_tool_names;
+  std::map<std::string,double> m_fjt_result;
+
+  std::map<std::string,int> m_max_ik_goal_number;
   std::string world_frame="world";
 
 
@@ -97,6 +102,8 @@ protected:
 
   Eigen::Affine3d m_T_w_as; // world <- approach to slot
   Eigen::Affine3d m_T_w_s;  // world <- slot
+  std::map<std::string,Eigen::VectorXd> m_preferred_configuration;
+  std::map<std::string,Eigen::VectorXd> m_preferred_configuration_weight;
 
 
   bool ik(const std::string& group_name,
@@ -151,10 +158,13 @@ protected:
                     const std::string& box_name);
 
 
-  moveit::planning_interface::MoveItErrorCode execute(const std::string& group_name,
-                                                      const moveit::planning_interface::MoveGroupInterface::Plan& plan);
-  void wait();
+  bool execute(const std::string& group_name,
+               const moveit::planning_interface::MoveGroupInterface::Plan& plan);
+  bool wait(const std::string& group_name);
 
+  void doneCb(const actionlib::SimpleClientGoalState& state,
+              const control_msgs::FollowJointTrajectoryResultConstPtr& result,
+              const std::string& group_name);
 public:
   PickObjects(const ros::NodeHandle& nh,
               const ros::NodeHandle& pnh);

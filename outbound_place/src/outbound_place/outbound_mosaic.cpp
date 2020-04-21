@@ -209,6 +209,12 @@ namespace pickplace
       as->start();
       m_as.insert(std::pair<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>>>(group_name,as));
 
+      std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>> fjt_ac;
+      fjt_ac.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>("/"+group_name+"/follow_joint_trajectory",true));
+      m_fjt_clients.insert(std::pair<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>>(group_name,fjt_ac));
+
+      m_fjt_result.insert(std::pair<std::string,double>(group_name,0));
+
     }
 
     m_target_pub=m_nh.advertise<geometry_msgs::PoseStamped>("target",1);
@@ -304,7 +310,13 @@ namespace pickplace
       return;
     }
 
-    wait();
+    if (!wait(group_name))
+    {
+      action_res.result=manipulation_msgs::PlaceObjectsResult::TrajectoryError;
+      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+      as->setAborted(action_res,"error in trajectory execution");
+      return;
+    }
     tf::poseEigenToMsg(T_w_as,target.pose);
     m_target_pub.publish(target);
     execute(group_name,approac_pick_plan);
@@ -325,11 +337,23 @@ namespace pickplace
       return;
     }
 
-    wait();
+    if (!wait(group_name))
+    {
+      action_res.result=manipulation_msgs::PlaceObjectsResult::TrajectoryError;
+      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+      as->setAborted(action_res,"error in trajectory execution");
+      return;
+    }
     tf::poseEigenToMsg(T_w_s,target.pose);
     m_target_pub.publish(target);
     execute(group_name,plan_plan);
-    wait();
+    if (!wait(group_name))
+    {
+      action_res.result=manipulation_msgs::PlaceObjectsResult::TrajectoryError;
+      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+      as->setAborted(action_res,"error in trajectory execution");
+      return;
+    }
 
     ros::Duration(0.5).sleep();
 
@@ -374,7 +398,13 @@ namespace pickplace
       return;
     }
 
-    wait();
+    if (!wait(group_name))
+    {
+      action_res.result=manipulation_msgs::PlaceObjectsResult::TrajectoryError;
+      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+      as->setAborted(action_res,"error in trajectory execution");
+      return;
+    }
     tf::poseEigenToMsg(T_w_as,target.pose);
     m_target_pub.publish(target);
     execute(group_name,return_plan);
@@ -402,8 +432,10 @@ namespace pickplace
     unsigned int n_seed=sols.size();
     bool found=false;
 
-    for (unsigned int iter=0;iter<ntrial;iter++)
+    for (unsigned int iter=0;iter<N_MAX_ITER;iter++)
     {
+      if (solutions.size()>=N_MAX_ITER)
+        break;
       if (iter<n_seed)
       {
         state.setJointGroupPositions(jmg,sols.at(iter));
@@ -419,6 +451,11 @@ namespace pickplace
 
       if (state.setFromIK(jmg,(Eigen::Isometry3d)T_w_a.matrix()))
       {
+        if (!state.satisfiesBounds())
+          continue;
+        state.updateCollisionBodyTransforms();
+        if (!m_planning_scene->isStateValid(state))
+          continue;
         Eigen::VectorXd js;
         state.copyJointGroupPositions(group_name,js);
         double dist=(js-actual_configuration).norm();
@@ -590,17 +627,37 @@ namespace pickplace
   }
 
 
-  moveit::planning_interface::MoveItErrorCode OutboundMosaic::execute(const std::string& group_name,
-                                                                      const moveit::planning_interface::MoveGroupInterface::Plan& plan)
+  bool OutboundMosaic::execute(const std::string& group_name,
+                               const moveit::planning_interface::MoveGroupInterface::Plan& plan)
   {
-    moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
+    control_msgs::FollowJointTrajectoryGoal goal;
+    goal.trajectory=plan.trajectory_.joint_trajectory;
 
-    return group->execute(plan);
+    auto cb=boost::bind(&pickplace::OutboundMosaic::doneCb,this,_1,_2,group_name);
+    m_fjt_clients.at(group_name)->sendGoal(goal,
+                                           cb);
+
+    m_fjt_result.at(group_name)=std::nan("1");;
+
+    return true;
   }
 
-  void  OutboundMosaic::wait()
+  bool OutboundMosaic::wait(const std::string& group_name)
   {
-
+    while (std::isnan(m_fjt_result.at(group_name)))
+      ros::Duration(0.01).sleep();
+    return !std::isnan(m_fjt_result.at(group_name));
   }
+
+  void OutboundMosaic::doneCb(const actionlib::SimpleClientGoalState &state, const control_msgs::FollowJointTrajectoryResultConstPtr &result, const std::string &group_name)
+  {
+    m_fjt_result.at(group_name)=result->error_code;
+    if (result->error_code<0)
+    {
+      ROS_ERROR("error executing %s/follow_joint_trajectory: %s",group_name.c_str(),result->error_string.c_str());
+    }
+    return;
+  }
+
 
 }

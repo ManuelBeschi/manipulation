@@ -53,7 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <object_loader_msgs/detachObject.h>
 #define N_ITER 20
 #define TOLERANCE 1e-6
-
+#define N_MAX_ITER 200
 
 #define ROS_PROTO(...) ROS_LOG(::ros::console::levels::Fatal, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
 

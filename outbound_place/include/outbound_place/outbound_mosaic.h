@@ -53,7 +53,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <object_loader_msgs/detachObject.h>
 #include <tf/transform_listener.h>
 #include <tf_conversions/tf_eigen.h>
-#define N_ITER 40
+
+#include <control_msgs/FollowJointTrajectoryAction.h>
+#define N_ITER 100
+#define N_MAX_ITER 2000
 #define TOLERANCE 1e-6
 
 
@@ -76,9 +79,11 @@ protected:
   std::map<std::string,moveit::planning_interface::MoveGroupInterfacePtr> m_groups;
   std::map<std::string,moveit::core::JointModelGroup*> m_joint_models;
   std::map<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>>> m_as;
+  std::map<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>> m_fjt_clients;
 
   std::string m_planner_plugin_name;
   std::vector<std::string> m_request_adapters;
+  std::map<std::string,double> m_fjt_result;
 
   ros::ServiceClient m_grasp_srv;
   ros::ServiceClient m_detach_object_srv;
@@ -97,6 +102,14 @@ protected:
           const Eigen::Affine3d& T_w_a, std::vector<Eigen::VectorXd >& sols, unsigned int ntrial=N_ITER);
 
 
+  bool execute(const std::string& group_name,
+                                                      const moveit::planning_interface::MoveGroupInterface::Plan& plan);
+
+
+  bool wait(const std::string& group_name);
+  void doneCb(const actionlib::SimpleClientGoalState& state,
+              const control_msgs::FollowJointTrajectoryResultConstPtr& result,
+              const std::string& group_name);
 
 public:
   OutboundMosaic(const ros::NodeHandle& nh,
@@ -124,10 +137,6 @@ public:
 
 
 
-
-  moveit::planning_interface::MoveItErrorCode execute(const std::string& group_name,
-                                                      const moveit::planning_interface::MoveGroupInterface::Plan& plan);
-  void wait();
 
   friend std::ostream& operator<<  (std::ostream& os, const OutboundMosaic& pick_objs);
 

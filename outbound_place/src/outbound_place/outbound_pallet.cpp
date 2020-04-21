@@ -354,7 +354,7 @@ namespace pickplace
     unsigned int n_seed=sols.size();
     bool found=false;
 
-    for (unsigned int iter=0;iter<ntrial;iter++)
+    for (unsigned int iter=0;iter<N_MAX_ITER;iter++)
     {
       if (iter<n_seed)
       {
