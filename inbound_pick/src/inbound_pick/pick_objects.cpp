@@ -306,11 +306,18 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     return;
   }
 
+  if (!selected_box->removeObject(selected_object->getId()))
+    ROS_WARN("unable to remove object");
+
+
+
   if (!wait(group_name))
   {
     action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
     ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
     as->setAborted(action_res,"error in trajectory execution");
+    // readd object to box
+    selected_box->addObject(selected_object);
     return;
   }
 
@@ -324,6 +331,8 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
     ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
     as->setAborted(action_res,"error in trajectory execution");
+    // readd object to box
+    selected_box->addObject(selected_object);
     return;
   }
 
@@ -356,10 +365,6 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
 
   Eigen::Affine3d T_w_approach=selected_grasp_pose->getPose();
   T_w_approach.translation()(2)+=selected_box->getHeight();
-
-  if (!selected_box->removeObject(selected_object->getId()))
-    ROS_WARN("unable to remove object");
-
 
   moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(group_name,
                                                                                       selected_grasp_pose->getConfiguration(),
