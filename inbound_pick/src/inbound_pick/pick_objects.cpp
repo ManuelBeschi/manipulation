@@ -414,15 +414,45 @@ bool PickObjects::createInboundBox(const std::string& box_name, const Eigen::Aff
   for (const std::string& group_name: m_group_names)
   {
     std::vector<Eigen::VectorXd> sols;
-    if (!ik(group_name,T_w_box,sols))
+    std::vector<std::vector<double>> sols_stl;
+
+    if (!m_pnh.hasParam("box_ik/"+box_name+"/"+group_name))
     {
-      ROS_WARN("found %zu ik solutions of pose of %s for group %s",sols.size(),box_name.c_str(),group_name.c_str());
-      sols.clear();
+
+      if (!ik(group_name,T_w_box,sols))
+      {
+        ROS_WARN("found %zu ik solutions of pose of %s for group %s",sols.size(),box_name.c_str(),group_name.c_str());
+        sols.clear();
+      }
+      else if (!ik(group_name,box->getApproachPose(),sols,sols.size()))
+      {
+        ROS_WARN("found %zu ik solutions of approach pose of %s for group %s",sols.size(),box_name.c_str(),group_name.c_str());
+        sols.clear();
+      }
+
+      sols_stl.resize(sols.size());
+      for (size_t isolution=0;isolution<sols.size();isolution++)
+      {
+        sols_stl.at(isolution).resize(sols.at(isolution).size());
+        for (size_t iax=0;iax<sols.at(isolution).size();iax++)
+          sols_stl.at(isolution).at(iax)=sols.at(isolution)(iax);
+      }
+      rosparam_utilities::setParam(m_pnh,"box_ik/"+box_name+"/"+group_name,sols_stl);
     }
-    else if (!ik(group_name,box->getApproachPose(),sols,sols.size()))
+    else
     {
-      ROS_WARN("found %zu ik solutions of approach pose of %s for group %s",sols.size(),box_name.c_str(),group_name.c_str());
-      sols.clear();
+      if (!rosparam_utilities::getParamMatrix(m_pnh,"box_ik/"+box_name+"/"+group_name,sols_stl))
+      {
+        ROS_ERROR("parameter %s/box_ik/%s/%s is not correct",m_pnh.getNamespace().c_str(),box_name.c_str(),group_name.c_str());
+        return false;
+      }
+      sols.resize(sols_stl.size());
+      for (size_t isolution=0;isolution<sols.size();isolution++)
+      {
+        sols.at(isolution).resize(sols_stl.at(isolution).size());
+        for (size_t iax=0;iax<sols.at(isolution).size();iax++)
+          sols.at(isolution)(iax)=sols_stl.at(isolution).at(iax);
+      }
     }
 
     box->setConfigurations(group_name,sols);
@@ -691,7 +721,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
     {
       if ((goal-jconf).norm()<TOLERANCE)
       {
-        ROS_INFO("selected box = %s", box.first.c_str());
+        ROS_DEBUG("selected box = %s", box.first.c_str());
         selected_box=box.second;
         found=true;
         break;
@@ -783,7 +813,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
     {
       if ((grasp_pose->getConfiguration()-jconf).norm()<TOLERANCE)
       {
-        ROS_INFO("selected object = %s, id = %s, in box %s", obj->getType().c_str(),obj->getId().c_str(),selected_box->getName().c_str());
+        ROS_DEBUG("selected object = %s, id = %s, in box %s", obj->getType().c_str(),obj->getId().c_str(),selected_box->getName().c_str());
         selected_object=obj;
         selected_grasp_pose=grasp_pose;
         found=true;

@@ -221,7 +221,7 @@ namespace pickplace
       for (const std::pair<std::string, Eigen::Affine3d>& p: m_slot_map)
       {
         std::string place_id=p.first;
-        ROS_INFO("Compute ik for slot %s, group=%s",place_id.c_str(),group_name.c_str());
+        ROS_DEBUG("Compute ik for slot %s, group=%s",place_id.c_str(),group_name.c_str());
 
         Eigen::Affine3d T_w_as; // world <- approach to slot
         Eigen::Affine3d T_w_s; // world <- slot
@@ -251,7 +251,7 @@ namespace pickplace
               sols_stl.at(isolution).at(iax)=sols.at(isolution)(iax);
           }
           rosparam_utilities::setParam(m_pnh,"slot_ik/"+place_id+"/"+group_name,sols_stl);
-          ROS_INFO("Find %zu solutions to slot %s (group=%s)",sols.size(),place_id.c_str(),group_name.c_str());
+          ROS_DEBUG("Find %zu solutions to slot %s (group=%s)",sols.size(),place_id.c_str(),group_name.c_str());
         }
         else
         {
@@ -284,7 +284,7 @@ namespace pickplace
             approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
             continue;
           }
-          ROS_INFO("Find %zu solutions to approach the slot %s (group=%s)",sols.size(),place_id.c_str(),group_name.c_str());
+          ROS_DEBUG("Find %zu solutions to approach the slot %s (group=%s)",sols.size(),place_id.c_str(),group_name.c_str());
 
           sols_stl.resize(sols.size());
           for (size_t isolution=0;isolution<sols.size();isolution++)

@@ -51,6 +51,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <object_loader_msgs/attachObject.h>
 #include <object_loader_msgs/detachObject.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
+#include <rosparam_utilities/rosparam_utilities.h>
 
 #define N_MAX_ITER 200
 #define N_TRIAL 40
