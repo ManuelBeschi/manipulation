@@ -95,6 +95,10 @@ protected:
                     Eigen::aligned_allocator<std::pair<const std::string, Eigen::Affine3d> > > m_slot_map;
   std::map<std::string, Eigen::Affine3d, std::less<std::string>,
                     Eigen::aligned_allocator<std::pair<const std::string, Eigen::Affine3d> > > m_approach_slot_map;
+
+  std::map<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>> m_slot_configurations;
+  std::map<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>> m_approach_slot_configurations;
+
   std::map<std::string,bool> m_slot_busy;
 
   bool m_init=false;
@@ -123,14 +127,13 @@ public:
 
 
   moveit::planning_interface::MoveGroupInterface::Plan planToSlot(const std::string& group_name,
-                                                                  const Eigen::Affine3d& T_w_s,
+                                                                  const std::string& place_id,
                                                                   const Eigen::VectorXd& starting_jconf,
                                                                   moveit::planning_interface::MoveItErrorCode& result,
                                                                   Eigen::VectorXd& slot_jconf);
 
   moveit::planning_interface::MoveGroupInterface::Plan planToApproachSlot(const std::string& group_name,
-                                                                          const Eigen::Affine3d& T_w_as,
-                                                                          const Eigen::Affine3d& T_w_s,
+                                                                          const std::string& place_id,
                                                                           const Eigen::VectorXd& starting_jconf,
                                                                           moveit::planning_interface::MoveItErrorCode& result,
                                                                           Eigen::VectorXd& slot_jconf);

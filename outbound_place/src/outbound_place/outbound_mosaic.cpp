@@ -215,6 +215,48 @@ namespace pickplace
 
       m_fjt_result.insert(std::pair<std::string,double>(group_name,0));
 
+      std::map<std::string,std::vector<Eigen::VectorXd>> slot_configurations;
+      std::map<std::string,std::vector<Eigen::VectorXd>> approach_slot_configurations;
+
+      for (const std::pair<std::string, Eigen::Affine3d>& p: m_slot_map)
+      {
+        std::string place_id=p.first;
+        ROS_INFO("Compute ik for slot %s, group=%s",place_id.c_str(),group_name.c_str());
+
+        Eigen::Affine3d T_w_as; // world <- approach to slot
+        Eigen::Affine3d T_w_s; // world <- slot
+        T_w_s=m_slot_map.at(place_id);
+        T_w_as=m_approach_slot_map.at(place_id);
+        std::vector<Eigen::VectorXd> sols;
+
+        // first, search solutions for the final destination
+        if (!ik(group_name,T_w_s,sols))
+        {
+          ROS_WARN("No Ik solution for the slot %s",place_id.c_str());
+          sols.clear();
+          slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+          approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+          continue;
+        }
+        slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+        ROS_INFO("Find %zu solutions to slot %s (group=%s)",sols.size(),place_id.c_str(),group_name.c_str());
+        // then,search solutions for the approach pose
+        if (!ik(group_name,T_w_as,sols,sols.size()))
+        {
+          ROS_WARN("No Ik solution for the approach to slot %s",place_id.c_str());
+          sols.clear();
+          slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+          approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+          continue;
+        }
+        approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+        ROS_INFO("Find %zu solutions to approach the slot %s (group=%s)",sols.size(),place_id.c_str(),group_name.c_str());
+
+      }
+      m_slot_configurations.insert(std::pair<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>>(group_name,slot_configurations));
+      m_approach_slot_configurations.insert(std::pair<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>>(group_name,approach_slot_configurations));
+
+
     }
 
     m_target_pub=m_nh.advertise<geometry_msgs::PoseStamped>("target",1);
@@ -231,11 +273,6 @@ namespace pickplace
   void OutboundMosaic::placeObjectGoalCb(const manipulation_msgs::PlaceObjectsGoalConstPtr& goal,
                                          const std::string& group_name)
   {
-    ROS_FATAL("Group %s", group_name.c_str());
-    ROS_FATAL("Group %s", group_name.c_str());
-    ROS_FATAL("Group %s", group_name.c_str());
-    ROS_FATAL("Group %s", group_name.c_str());
-
     std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>> as=m_as.at(group_name);
 
     manipulation_msgs::PlaceObjectsResult action_res;
@@ -296,8 +333,7 @@ namespace pickplace
     group->getCurrentState()->copyJointGroupPositions(group_name,actual_jconf);
     Eigen::VectorXd approach_slot_jconf;
     moveit::planning_interface::MoveGroupInterface::Plan approac_pick_plan=planToApproachSlot(group_name,
-                                                                                              T_w_as,
-                                                                                              T_w_s,
+                                                                                              place_id,
                                                                                               actual_jconf,
                                                                                               result,
                                                                                               approach_slot_jconf);
@@ -324,7 +360,7 @@ namespace pickplace
 
     Eigen::VectorXd slot_jconf;
     moveit::planning_interface::MoveGroupInterface::Plan plan_plan=planToSlot(group_name,
-                                                                              T_w_s,
+                                                                              place_id,
                                                                               approach_slot_jconf,
                                                                               result,
                                                                               slot_jconf);
@@ -384,8 +420,7 @@ namespace pickplace
 
 
     moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(group_name,
-                                                                                        T_w_as,
-                                                                                        T_w_s,
+                                                                                        place_id,
                                                                                         slot_jconf,
                                                                                         result,
                                                                                         approach_slot_jconf);
@@ -434,7 +469,7 @@ namespace pickplace
 
     for (unsigned int iter=0;iter<N_MAX_ITER;iter++)
     {
-      if (solutions.size()>=N_MAX_ITER)
+      if (solutions.size()>=N_ITER)
         break;
       if (iter<n_seed)
       {
@@ -501,7 +536,7 @@ namespace pickplace
 
 
   moveit::planning_interface::MoveGroupInterface::Plan OutboundMosaic::planToSlot(const std::string& group_name,
-                                                                                  const Eigen::Affine3d& T_w_s,
+                                                                                  const std::string& place_id,
                                                                                   const Eigen::VectorXd& starting_jconf,
                                                                                   moveit::planning_interface::MoveItErrorCode& result,
                                                                                   Eigen::VectorXd& slot_jconf)
@@ -522,14 +557,8 @@ namespace pickplace
     req.allowed_planning_time=5;
     robot_state::RobotState goal_state(m_kinematic_model);
 
-    std::vector<Eigen::VectorXd> sols;
+    std::vector<Eigen::VectorXd> sols=m_approach_slot_configurations.at(group_name).at(place_id);
 
-    if (!ik(group_name,T_w_s,sols))
-    {
-      ROS_ERROR("No Ik solution for the slot");
-      result=moveit::planning_interface::MoveItErrorCode::GOAL_IN_COLLISION;
-      return plan;
-    }
 
     for (const Eigen::VectorXd& goal: sols)
     {
@@ -559,8 +588,7 @@ namespace pickplace
 
 
   moveit::planning_interface::MoveGroupInterface::Plan OutboundMosaic::planToApproachSlot(const std::string& group_name,
-                                                                                          const Eigen::Affine3d& T_w_as,
-                                                                                          const Eigen::Affine3d& T_w_s,
+                                                                                          const std::string& place_id,
                                                                                           const Eigen::VectorXd& starting_jconf,
                                                                                           moveit::planning_interface::MoveItErrorCode& result,
                                                                                           Eigen::VectorXd& slot_jconf)
@@ -579,22 +607,7 @@ namespace pickplace
     req.allowed_planning_time=5;
     robot_state::RobotState goal_state(m_kinematic_model);
 
-    std::vector<Eigen::VectorXd> sols;
-    sols.push_back(starting_jconf);
-    // first, search solutions for the final destination
-    if (!ik(group_name,T_w_s,sols))
-    {
-      ROS_ERROR("No Ik solution for the slot");
-      result=moveit::planning_interface::MoveItErrorCode::GOAL_IN_COLLISION;
-      return plan;
-    }
-    // then,search solutions for the approach pose
-    if (!ik(group_name,T_w_as,sols,sols.size()))
-    {
-      ROS_ERROR("No Ik solution for the approach");
-      result=moveit::planning_interface::MoveItErrorCode::GOAL_IN_COLLISION;
-      return plan;
-    }
+    std::vector<Eigen::VectorXd> sols=m_approach_slot_configurations.at(group_name).at(place_id);
 
     for (const Eigen::VectorXd& goal: sols)
     {
