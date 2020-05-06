@@ -228,29 +228,89 @@ namespace pickplace
         T_w_s=m_slot_map.at(place_id);
         T_w_as=m_approach_slot_map.at(place_id);
         std::vector<Eigen::VectorXd> sols;
+        std::vector<std::vector<double>> sols_stl;
 
-        // first, search solutions for the final destination
-        if (!ik(group_name,T_w_s,sols))
+        if (!m_pnh.hasParam("slot_ik/"+place_id+"/"+group_name))
         {
-          ROS_WARN("No Ik solution for the slot %s",place_id.c_str());
-          sols.clear();
-          slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
-          approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
-          continue;
+          // first, search solutions for the final destination
+          if (!ik(group_name,T_w_s,sols))
+          {
+            ROS_WARN("No Ik solution for the slot %s",place_id.c_str());
+            sols.clear();
+            slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+            approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+            continue;
+          }
+
+
+          sols_stl.resize(sols.size());
+          for (size_t isolution=0;isolution<sols.size();isolution++)
+          {
+            sols_stl.at(isolution).resize(sols.at(isolution).size());
+            for (size_t iax=0;iax<sols.at(isolution).size();iax++)
+              sols_stl.at(isolution).at(iax)=sols.at(isolution)(iax);
+          }
+          rosparam_utilities::setParam(m_pnh,"slot_ik/"+place_id+"/"+group_name,sols_stl);
+          ROS_INFO("Find %zu solutions to slot %s (group=%s)",sols.size(),place_id.c_str(),group_name.c_str());
+        }
+        else
+        {
+          if (!rosparam_utilities::getParamMatrix(m_pnh,"slot_ik/"+place_id+"/"+group_name,sols_stl))
+          {
+            ROS_ERROR("parameter %s/slot_ik/%s/%s is not correct",m_pnh.getNamespace().c_str(),place_id.c_str(),group_name.c_str());
+            return false;
+          }
+          sols.resize(sols_stl.size());
+          for (size_t isolution=0;isolution<sols.size();isolution++)
+          {
+            sols.at(isolution).resize(sols_stl.at(isolution).size());
+            for (size_t iax=0;iax<sols.at(isolution).size();iax++)
+              sols.at(isolution)(iax)=sols_stl.at(isolution).at(iax);
+          }
         }
         slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
-        ROS_INFO("Find %zu solutions to slot %s (group=%s)",sols.size(),place_id.c_str(),group_name.c_str());
-        // then,search solutions for the approach pose
-        if (!ik(group_name,T_w_as,sols,sols.size()))
+
+
+        if (!m_pnh.hasParam("approach_ik/"+place_id+"/"+group_name))
         {
-          ROS_WARN("No Ik solution for the approach to slot %s",place_id.c_str());
-          sols.clear();
-          slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
-          approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
-          continue;
+
+
+          // then,search solutions for the approach pose
+          if (!ik(group_name,T_w_as,sols,sols.size()))
+          {
+            ROS_WARN("No Ik solution for the approach to slot %s",place_id.c_str());
+            sols.clear();
+            slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+            approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+            continue;
+          }
+          ROS_INFO("Find %zu solutions to approach the slot %s (group=%s)",sols.size(),place_id.c_str(),group_name.c_str());
+
+          sols_stl.resize(sols.size());
+          for (size_t isolution=0;isolution<sols.size();isolution++)
+          {
+            sols_stl.at(isolution).resize(sols.at(isolution).size());
+            for (size_t iax=0;iax<sols.at(isolution).size();iax++)
+              sols_stl.at(isolution).at(iax)=sols.at(isolution)(iax);
+          }
+          rosparam_utilities::setParam(m_pnh,"approach_ik/"+place_id+"/"+group_name,sols_stl);
+        }
+        else
+        {
+          if (!rosparam_utilities::getParamMatrix(m_pnh,"approach_ik/"+place_id+"/"+group_name,sols_stl))
+          {
+            ROS_ERROR("parameter %s/approach_ik/%s/%s is not correct",m_pnh.getNamespace().c_str(),place_id.c_str(),group_name.c_str());
+            return false;
+          }
+          sols.resize(sols_stl.size());
+          for (size_t isolution=0;isolution<sols.size();isolution++)
+          {
+            sols.at(isolution).resize(sols_stl.at(isolution).size());
+            for (size_t iax=0;iax<sols.at(isolution).size();iax++)
+              sols.at(isolution)(iax)=sols_stl.at(isolution).at(iax);
+          }
         }
         approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
-        ROS_INFO("Find %zu solutions to approach the slot %s (group=%s)",sols.size(),place_id.c_str(),group_name.c_str());
 
       }
       m_slot_configurations.insert(std::pair<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>>(group_name,slot_configurations));
