@@ -215,28 +215,20 @@ namespace pickplace
 
     ROS_PROTO("plannig to approach");
 
-//    Eigen::VectorXd approach_jconf;
-//    moveit::planning_interface::MoveGroupInterface::Plan plan=planToApproach(result,approach_jconf);
-
-
-//    if (!result)
-//    {
-//      action_res.result=manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
-//      ROS_ERROR("error in plan to approach place pose, code = %d",result.val);
-//      m_as->setAborted(action_res,"error in planning to pallet");
-//      return;
-//    }
-//    ROS_PROTO("plan to approach in %f second",plan.planning_time_);
-
-//    tf::poseEigenToMsg(m_T_w_a,target.pose);
-//    m_target_pub.publish(target);
-//    execute(plan);
 
 
     Eigen::VectorXd approach_slot_jconf;
-    moveit::planning_interface::MoveGroupInterface::Plan approac_pick_plan=planToApproachSlot(result,
+
+    for (int iplan_trial=0;iplan_trial<10;iplan_trial++)
+    {
+      moveit::planning_interface::MoveGroupInterface::Plan approac_pick_plan=planToApproachSlot(result,
                                                                                               approach_slot_jconf);
 
+      if (result)
+      {
+        break;
+      }
+    }
     if (!result)
     {
       action_res.result=manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
@@ -245,6 +237,7 @@ namespace pickplace
       return;
     }
 
+
     wait();
     tf::poseEigenToMsg(m_T_w_as,target.pose);
     m_target_pub.publish(target);
@@ -252,10 +245,17 @@ namespace pickplace
 
 
     Eigen::VectorXd slot_jconf;
-    moveit::planning_interface::MoveGroupInterface::Plan plan_plan=planToSlot(approach_slot_jconf,
-                                                                              result,
-                                                                              slot_jconf);
+    for (int iplan_trial=0;iplan_trial<10;iplan_trial++)
+    {
+      moveit::planning_interface::MoveGroupInterface::Plan plan_plan=planToSlot(approach_slot_jconf,
+                                                                                result,
+                                                                                slot_jconf);
 
+      if (result)
+      {
+        break;
+      }
+    }
     if (!result)
     {
       action_res.result=manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
@@ -303,14 +303,21 @@ namespace pickplace
 //                                                                                            );
 
 
-    moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(result,
-                                                                                        approach_slot_jconf);
+    for (int iplan_trial=0;iplan_trial<10;iplan_trial++)
+    {
+      moveit::planning_interface::MoveGroupInterface::Plan approac_pick_plan=planToApproachSlot(result,
+                                                                                              approach_slot_jconf);
 
+      if (result)
+      {
+        break;
+      }
+    }
     if (!result)
     {
       action_res.result=manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
-      ROS_ERROR("error in plan black to box, code = %d",result.val);
-      m_as->setAborted(action_res,"error in planning back to box");
+      ROS_ERROR("error in plan for placing slot, code = %d",result.val);
+      m_as->setAborted(action_res,"error in planning for placing");
       return;
     }
 
