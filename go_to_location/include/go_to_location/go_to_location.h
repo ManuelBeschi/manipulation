@@ -45,29 +45,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <actionlib/server/simple_action_server.h>
 #include <manipulation_msgs/AddObjects.h>
 #include <manipulation_msgs/AddBox.h>
-#include <manipulation_msgs/PlaceObjectsAction.h>
+#include <manipulation_msgs/GoToAction.h>
 #include <manipulation_msgs/ListOfObjects.h>
 #include <eigen_conversions/eigen_msg.h>
 #include <std_srvs/SetBool.h>
 #include <rosparam_utilities/rosparam_utilities.h>
-#include <object_loader_msgs/detachObject.h>
 #include <tf/transform_listener.h>
 #include <tf_conversions/tf_eigen.h>
-
+#include <rosparam_utilities/rosparam_utilities.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
-#define N_ITER 100
-#define N_MAX_ITER 4000
-#define TOLERANCE 1e-6
 
 
-#define ROS_PROTO(...) ROS_LOG(::ros::console::levels::Debug, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
-
-
-namespace pickplace {
-
-class OutboundMosaic
+namespace manipulation_skills
 {
-
+class GoToLocation
+{
 protected:
 
 
@@ -78,34 +70,19 @@ protected:
   std::vector<std::string> m_group_names;
   std::map<std::string,moveit::planning_interface::MoveGroupInterfacePtr> m_groups;
   std::map<std::string,moveit::core::JointModelGroup*> m_joint_models;
-  std::map<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>>> m_as;
+  std::map<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::GoToAction>>> m_as;
   std::map<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>> m_fjt_clients;
 
   std::string m_planner_plugin_name;
   std::vector<std::string> m_request_adapters;
   std::map<std::string,double> m_fjt_result;
 
-  ros::ServiceClient m_grasp_srv;
-  ros::ServiceClient m_detach_object_srv;
+
   ros::Publisher m_target_pub;
   ros::NodeHandle m_nh;
   ros::NodeHandle m_pnh;
 
-  std::map<std::string, Eigen::Affine3d, std::less<std::string>,
-                    Eigen::aligned_allocator<std::pair<const std::string, Eigen::Affine3d> > > m_slot_map;
-  std::map<std::string, Eigen::Affine3d, std::less<std::string>,
-                    Eigen::aligned_allocator<std::pair<const std::string, Eigen::Affine3d> > > m_approach_slot_map;
-
-  std::map<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>> m_slot_configurations;
-  std::map<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>> m_approach_slot_configurations;
-
-  std::map<std::string,bool> m_slot_busy;
-
   bool m_init=false;
-  bool ik(const std::string& group_name,
-          const Eigen::Affine3d& T_w_a, std::vector<Eigen::VectorXd >& sols, unsigned int ntrial=N_ITER);
-
-
   bool execute(const std::string& group_name,
                                                       const moveit::planning_interface::MoveGroupInterface::Plan& plan);
 
@@ -116,34 +93,24 @@ protected:
               const std::string& group_name);
 
 public:
-  OutboundMosaic(const ros::NodeHandle& nh,
+  GoToLocation(const ros::NodeHandle& nh,
                  const ros::NodeHandle& pnh);
 
   bool init();
 
 
-  void placeObjectGoalCb(const manipulation_msgs::PlaceObjectsGoalConstPtr& goal,
+  void gotoGoalCb(const manipulation_msgs::GoToGoalConstPtr& goal,
                          const std::string& group_name);
 
 
-  moveit::planning_interface::MoveGroupInterface::Plan planToSlot(const std::string& group_name,
+  moveit::planning_interface::MoveGroupInterface::Plan planToLocation(const std::string& group_name,
                                                                   const std::string& place_id,
-                                                                  const Eigen::VectorXd& starting_jconf,
-                                                                  moveit::planning_interface::MoveItErrorCode& result,
-                                                                  Eigen::VectorXd& slot_jconf);
-
-  moveit::planning_interface::MoveGroupInterface::Plan planToApproachSlot(const std::string& group_name,
-                                                                          const std::string& place_id,
-                                                                          const Eigen::VectorXd& starting_jconf,
-                                                                          moveit::planning_interface::MoveItErrorCode& result,
-                                                                          Eigen::VectorXd& slot_jconf);
+                                                                      const Eigen::VectorXd& starting_jconf,
+                                                                      const Eigen::VectorXd& location_jconf,
+                                                                  moveit::planning_interface::MoveItErrorCode& result);
 
 
-
-
-  friend std::ostream& operator<<  (std::ostream& os, const OutboundMosaic& pick_objs);
-
+  friend std::ostream& operator<<  (std::ostream& os, const GoToLocation& goto_location);
 };
-
-
 }
+

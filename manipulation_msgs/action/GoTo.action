@@ -1,0 +1,11 @@
+string location_id
+---
+int8 result
+int8 SceneError=-1
+int8 NoAvailableTrajectories=-2
+int8 TrajectoryError=-3
+int8 NotInitialized=-4
+int8 Success=0
+---
+int8 phase
+int8 GoingToLocation=1

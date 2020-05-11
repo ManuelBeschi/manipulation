@@ -218,10 +218,10 @@ namespace pickplace
 
 
     Eigen::VectorXd approach_slot_jconf;
-
+    moveit::planning_interface::MoveGroupInterface::Plan approac_pick_plan;
     for (int iplan_trial=0;iplan_trial<10;iplan_trial++)
     {
-      moveit::planning_interface::MoveGroupInterface::Plan approac_pick_plan=planToApproachSlot(result,
+      approac_pick_plan=planToApproachSlot(result,
                                                                                               approach_slot_jconf);
 
       if (result)
@@ -245,9 +245,10 @@ namespace pickplace
 
 
     Eigen::VectorXd slot_jconf;
+    moveit::planning_interface::MoveGroupInterface::Plan plan_plan;
     for (int iplan_trial=0;iplan_trial<10;iplan_trial++)
     {
-      moveit::planning_interface::MoveGroupInterface::Plan plan_plan=planToSlot(approach_slot_jconf,
+      plan_plan=planToSlot(approach_slot_jconf,
                                                                                 result,
                                                                                 slot_jconf);
 
@@ -303,10 +304,12 @@ namespace pickplace
 //                                                                                            );
 
 
+    moveit::planning_interface::MoveGroupInterface::Plan return_pick_plan;
+
     for (int iplan_trial=0;iplan_trial<10;iplan_trial++)
     {
-      moveit::planning_interface::MoveGroupInterface::Plan approac_pick_plan=planToApproachSlot(result,
-                                                                                              approach_slot_jconf);
+      return_pick_plan=planToApproachSlot(result,
+                                          approach_slot_jconf);
 
       if (result)
       {
@@ -324,7 +327,7 @@ namespace pickplace
     wait();
     tf::poseEigenToMsg(m_T_w_a,target.pose);
     m_target_pub.publish(target);
-    execute(return_plan);
+    execute(return_pick_plan);
 
     action_res.result=manipulation_msgs::PlaceObjectsResult::Success;
     m_as->setSucceeded(action_res,"ok");
