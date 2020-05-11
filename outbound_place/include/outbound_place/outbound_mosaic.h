@@ -56,7 +56,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #define N_ITER 100
-#define N_MAX_ITER 4000
+#define N_MAX_ITER 2000
 #define TOLERANCE 1e-6
 
 
