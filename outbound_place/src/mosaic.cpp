@@ -7,7 +7,7 @@ int main(int argc, char **argv)
   ros::NodeHandle pnh("~");
 
 
-  ros::AsyncSpinner spinner(4);
+  ros::AsyncSpinner spinner(8);
   spinner.start();
 
   pickplace::OutboundMosaic pallet(nh,pnh)  ;

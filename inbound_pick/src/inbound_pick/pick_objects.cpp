@@ -99,7 +99,6 @@ bool PickObjects::init()
     as.reset(new actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>(m_nh,group_name+"/pick",
                                                                                     boost::bind(&PickObjects::pickObjectGoalCb,this,_1,group_name),
                                                                                     false));
-    as->start();
     m_pick_servers.insert(std::pair<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>>>(group_name,as));
 
     std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>> fjt_ac;
@@ -107,6 +106,8 @@ bool PickObjects::init()
     m_fjt_clients.insert(std::pair<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>>(group_name,fjt_ac));
 
     m_fjt_result.insert(std::pair<std::string,double>(group_name,0));
+
+
   }
 
   m_add_obj_srv=m_nh.advertiseService("add_objects",&PickObjects::addObjectCb,this);
@@ -119,6 +120,10 @@ bool PickObjects::init()
 
   m_grasp_srv=m_nh.serviceClient<std_srvs::SetBool>("/gripper/grasp");
 
+  for (const std::string& group_name: m_group_names)
+  {
+    m_pick_servers.at(group_name)->start();
+  }
   return true;
 }
 

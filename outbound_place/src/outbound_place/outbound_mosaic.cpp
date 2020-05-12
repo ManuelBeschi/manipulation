@@ -206,7 +206,6 @@ namespace pickplace
       as.reset(new actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>(m_nh,group_name+"/place",
                                                                                           boost::bind(&OutboundMosaic::placeObjectGoalCb,this,_1,group_name),
                                                                                           false));
-      as->start();
       m_as.insert(std::pair<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>>>(group_name,as));
 
       std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>> fjt_ac;
@@ -325,7 +324,10 @@ namespace pickplace
 
     m_init=true;
 
-
+    for (const std::string& group_name: m_group_names)
+    {
+      m_as.at(group_name)->start();
+    }
     return true;
 
   }

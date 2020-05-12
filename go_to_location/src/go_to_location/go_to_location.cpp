@@ -89,7 +89,6 @@ bool GoToLocation::init()
     as.reset(new actionlib::SimpleActionServer<manipulation_msgs::GoToAction>(m_nh,group_name+"/goto",
                                                                               boost::bind(&GoToLocation::gotoGoalCb,this,_1,group_name),
                                                                               false));
-    as->start();
     m_as.insert(std::pair<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::GoToAction>>>(group_name,as));
 
     std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>> fjt_ac;
@@ -97,14 +96,15 @@ bool GoToLocation::init()
     m_fjt_clients.insert(std::pair<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>>(group_name,fjt_ac));
 
     m_fjt_result.insert(std::pair<std::string,double>(group_name,0));
-
-
   }
 
   m_target_pub=m_nh.advertise<geometry_msgs::PoseStamped>("target",1);
 
   m_init=true;
-
+  for (const std::string& group_name: m_group_names)
+  {
+    m_as.at(group_name)->start();
+  }
 
   return true;
 
@@ -138,6 +138,13 @@ void GoToLocation::gotoGoalCb(const manipulation_msgs::GoToGoalConstPtr& goal,
   }
 
   moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
+  if (!group->startStateMonitor(2))
+  {
+    ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
+    action_res.result=manipulation_msgs::GoToResult::SceneError;
+    as->setAborted(action_res,"unable to get actual state");
+    return;
+  }
   group->setStartState(*group->getCurrentState());
   moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
 
@@ -172,6 +179,7 @@ void GoToLocation::gotoGoalCb(const manipulation_msgs::GoToGoalConstPtr& goal,
     return;
   }
 
+  execute(group_name,approac_pick_plan);
   if (!wait(group_name))
   {
     action_res.result=manipulation_msgs::GoToResult::TrajectoryError;
@@ -179,9 +187,6 @@ void GoToLocation::gotoGoalCb(const manipulation_msgs::GoToGoalConstPtr& goal,
     as->setAborted(action_res,"error in trajectory execution");
     return;
   }
-
-  execute(group_name,approac_pick_plan);
-
 
   action_res.result=manipulation_msgs::GoToResult::Success;
   as->setSucceeded(action_res,"ok");
@@ -206,12 +211,14 @@ moveit::planning_interface::MoveGroupInterface::Plan GoToLocation::planToLocatio
 
   robot_state::RobotState state = *group->getCurrentState();
   state.setJointGroupPositions(jmg,starting_jconf);
+
   moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
 
   planning_interface::MotionPlanRequest req;
   planning_interface::MotionPlanResponse res;
   req.group_name=group_name;
   req.start_state=plan.start_state_;
+
   req.allowed_planning_time=5;
   robot_state::RobotState goal_state(m_kinematic_model);
 

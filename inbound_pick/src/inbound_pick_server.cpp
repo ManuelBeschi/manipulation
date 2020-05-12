@@ -9,7 +9,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "inbound_server");
   ros::NodeHandle nh;
   ros::NodeHandle pnh("~");
-  ros::AsyncSpinner spinner(4);
+  ros::AsyncSpinner spinner(8);
   spinner.start();
 
   pickplace::PickObjects pick(nh,pnh);
