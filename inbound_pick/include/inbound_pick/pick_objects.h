@@ -53,8 +53,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <rosparam_utilities/rosparam_utilities.h>
 
-#define N_MAX_ITER 5000
-#define N_TRIAL 100
+#define N_MAX_ITER 2000
+#define N_TRIAL 50
 #define TOLERANCE 1e-6
 
 
