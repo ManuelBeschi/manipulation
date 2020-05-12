@@ -234,7 +234,13 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
 
   }
   ROS_PROTO("Found %zu solution",sols.size());
+  if (req.goal_constraints.size()==0)
+  {
+    ROS_ERROR("Inbound server: no valid goals");
+    result= res.error_code_;
+    return plan;
 
+  }
   if (!m_planning_pipeline->generatePlan(m_planning_scene, req, res))
   {
     ROS_ERROR("Could not compute plan successfully");
@@ -606,6 +612,8 @@ bool PickObjects::ik(const std::string& group_name, Eigen::Affine3d T_w_a, std::
   {
     if (solutions.size()>=ntrial)
       break;
+    if (solutions.size()==0 && iter>ntrial*5)
+      break;
 
     if (iter<n_seed)
     {
@@ -716,13 +724,21 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
       req.goal_constraints.push_back(joint_goal);
     }
   }
+  if (req.goal_constraints.size()==0)
+  {
+    ROS_ERROR("Inbound server: no valid goals");
+    result= res.error_code_;
+    return plan;
+
+  }
 
   ROS_PROTO("number of possible goals = %zu",req.goal_constraints.size());
 
   if (!m_planning_pipeline->generatePlan(m_planning_scene, req, res))
   {
     ROS_ERROR("Could not compute plan successfully");
-    result= res.error_code_;
+
+    result=moveit::planning_interface::MoveItErrorCode::FAILURE;
     return plan;
 
   }
@@ -819,6 +835,13 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
 
       }
     }
+  }
+  if (req.goal_constraints.size()==0)
+  {
+    ROS_ERROR("Inbound server: no valid goals");
+    result= res.error_code_;
+    return plan;
+
   }
 
   if (!m_planning_pipeline->generatePlan(m_planning_scene, req, res))

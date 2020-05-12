@@ -545,7 +545,7 @@ namespace pickplace
 
     for (unsigned int iter=0;iter<N_MAX_ITER;iter++)
     {
-      if (solutions.size()>=N_ITER)
+      if (solutions.size()>=3*N_ITER)
         break;
       if (iter<n_seed)
       {
@@ -602,6 +602,8 @@ namespace pickplace
     sols.clear();
     for (const std::pair<double,Eigen::VectorXd>& sol: solutions)
     {
+      if (sols.size()>=N_ITER)
+        break;
       sols.push_back(sol.second);
     }
 
@@ -673,6 +675,10 @@ namespace pickplace
     moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
     moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
 
+    if (!group->startStateMonitor(2))
+    {
+      ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
+    }
     robot_state::RobotState state = *group->getCurrentState();
     moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
 
