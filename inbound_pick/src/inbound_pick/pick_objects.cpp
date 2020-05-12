@@ -189,6 +189,14 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
   moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
   moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
   int max_ik_goal_number=m_max_ik_goal_number.at(group_name);
+
+
+  if (!group->startStateMonitor(2))
+  {
+    ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
+    result=moveit::planning_interface::MoveItErrorCode::UNABLE_TO_AQUIRE_SENSOR_DATA;
+    return plan;
+  }
   robot_state::RobotState state = *group->getCurrentState();
   state.setJointGroupPositions(jmg,starting_jconf);
   moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
@@ -256,6 +264,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     as->setAborted(action_res,"no objects found");
     return;
   }
+
 
   moveit::planning_interface::MoveItErrorCode result;
   pickplace::InboundBoxPtr selected_box;
@@ -660,6 +669,14 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
   moveit::planning_interface::MoveGroupInterface::Plan plan;
   moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
   moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
+
+  if (!group->startStateMonitor(2))
+  {
+    ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
+    result=moveit::planning_interface::MoveItErrorCode::UNABLE_TO_AQUIRE_SENSOR_DATA;
+    return plan;
+  }
+
   robot_state::RobotState state = *group->getCurrentState();
   int max_ik_goal_number=m_max_ik_goal_number.at(group_name);
   //  m_planning_scene->getCurrentState()
@@ -755,6 +772,13 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
   moveit::planning_interface::MoveGroupInterface::Plan plan;
   int max_ik_goal_number=m_max_ik_goal_number.at(group_name);
 
+
+  if (!group->startStateMonitor(2))
+  {
+    ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
+    result=moveit::planning_interface::MoveItErrorCode::UNABLE_TO_AQUIRE_SENSOR_DATA;
+    return plan;
+  }
   if (objects.size()==0)
   {
     result=moveit::planning_interface::MoveItErrorCode::INVALID_GOAL_CONSTRAINTS;
