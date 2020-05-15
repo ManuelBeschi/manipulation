@@ -72,9 +72,9 @@ protected:
 
 
   robot_model::RobotModelPtr m_kinematic_model;
-  std::shared_ptr<planning_scene::PlanningScene> m_planning_scene;
 
   std::map<std::string,planning_pipeline::PlanningPipelinePtr> m_planning_pipeline;
+  std::map<std::string,std::shared_ptr<planning_scene::PlanningScene>> m_planning_scene;
   std::vector<std::string> m_group_names;
   std::map<std::string,moveit::planning_interface::MoveGroupInterfacePtr> m_groups;
   std::map<std::string,moveit::core::JointModelGroup*> m_joint_models;

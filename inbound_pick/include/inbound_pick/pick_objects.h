@@ -72,7 +72,7 @@ class PickObjects
 protected:
   std::map<std::string,InboundBoxPtr> m_boxes;
 
-  std::shared_ptr<planning_scene::PlanningScene> m_planning_scene;
+  std::map<std::string,std::shared_ptr<planning_scene::PlanningScene>> m_planning_scene;
   robot_model::RobotModelPtr m_kinematic_model;
   std::map<std::string,planning_pipeline::PlanningPipelinePtr> m_planning_pipeline;
   std::vector<std::string> m_request_adapters;

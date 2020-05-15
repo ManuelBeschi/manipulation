@@ -15,7 +15,6 @@ bool PickObjects::init()
 {
   robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
   m_kinematic_model = robot_model_loader.getModel();
-  m_planning_scene=std::make_shared<planning_scene::PlanningScene>(m_kinematic_model);
 
   if (!m_pnh.getParam("request_adapters", m_request_adapters))
     ROS_ERROR_STREAM("Could not find request_adapters in namespace " << m_pnh.getNamespace());
@@ -40,6 +39,8 @@ bool PickObjects::init()
       ROS_ERROR_STREAM("Could not find planner plugin name");
       return false;
     }
+
+    m_planning_scene.insert(std::pair<std::string,std::shared_ptr<planning_scene::PlanningScene>>(group_name,std::make_shared<planning_scene::PlanningScene>(m_kinematic_model)));
 
     planning_pipeline::PlanningPipelinePtr planning_pipeline=std::make_shared<planning_pipeline::PlanningPipeline>(m_kinematic_model, m_nh, planner_plugin_name, m_request_adapters);
     m_planning_pipeline.insert(std::pair<std::string,planning_pipeline::PlanningPipelinePtr>(group_name,planning_pipeline));
@@ -230,7 +231,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
       break;
     goal_state.setJointGroupPositions(jmg, goal);
     goal_state.updateCollisionBodyTransforms();
-    if (!m_planning_scene->isStateValid(goal_state))
+    if (!m_planning_scene.at(group_name)->isStateValid(goal_state))
       continue;
     moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
     req.goal_constraints.push_back(joint_goal);
@@ -244,7 +245,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
     return plan;
 
   }
-  if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene, req, res))
+  if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene.at(group_name), req, res))
   {
     ROS_ERROR("Could not compute plan successfully");
     result= res.error_code_;
@@ -721,7 +722,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
         break;
       goal_state.setJointGroupPositions(jmg, goal);
       goal_state.updateCollisionBodyTransforms();
-      if (!m_planning_scene->isStateValid(goal_state))
+      if (!m_planning_scene.at(group_name)->isStateValid(goal_state))
         continue;
       moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
       req.goal_constraints.push_back(joint_goal);
@@ -737,7 +738,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
 
   ROS_PROTO("number of possible goals = %zu",req.goal_constraints.size());
 
-  if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene, req, res))
+  if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene.at(group_name), req, res))
   {
     ROS_ERROR("Could not compute plan successfully");
 
@@ -829,7 +830,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
       {
         goal_state.setJointGroupPositions(jmg, grasp_pose->getConfiguration());
         goal_state.updateCollisionBodyTransforms();
-        if (!m_planning_scene->isStateValid(goal_state))
+        if (!m_planning_scene.at(group_name)->isStateValid(goal_state))
           continue;
         moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
         req.goal_constraints.push_back(joint_goal);
@@ -847,7 +848,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
 
   }
 
-  if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene, req, res))
+  if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene.at(group_name), req, res))
   {
     ROS_ERROR("Could not compute plan successfully");
     result= res.error_code_;
