@@ -4,10 +4,12 @@
 namespace pickplace
 {
 
-GraspPose::GraspPose(const Eigen::VectorXd& jconf, const std::string &tool_name, const Eigen::Affine3d& T_w_g):
+GraspPose::GraspPose(const Eigen::VectorXd& jconf, const std::vector<Eigen::VectorXd>& approach_jconf, const std::string &tool_name, const Eigen::Affine3d& T_w_g, const Eigen::Affine3d& T_w_a):
   m_jconf(jconf),
+  m_approach_jconf(approach_jconf),
   m_tool_name(tool_name),
-  m_T_w_g(T_w_g)
+  m_T_w_g(T_w_g),
+  m_T_w_a(T_w_a)
 {
 }
 

@@ -55,7 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <tf_conversions/tf_eigen.h>
 
 #include <control_msgs/FollowJointTrajectoryAction.h>
-#define N_ITER 50
+#define N_ITER 30
 #define N_MAX_ITER 2000
 #define TOLERANCE 1e-6
 

@@ -54,7 +54,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <rosparam_utilities/rosparam_utilities.h>
 
 #define N_MAX_ITER 2000
-#define N_TRIAL 50
+#define N_TRIAL 30
 #define TOLERANCE 1e-6
 
 
@@ -117,6 +117,8 @@ protected:
   moveit::planning_interface::MoveGroupInterface::Plan planToApproachSlot(const std::string& group_name,
                                                                           const Eigen::VectorXd& starting_jconf,
                                                                           const Eigen::Affine3d& approach_pose,
+                                                                          const ObjectPtr& selected_object,
+                                                                          const GraspPosePtr& selected_grasp_pose,
                                                                           moveit::planning_interface::MoveItErrorCode& result,
                                                                           Eigen::VectorXd& slot_jconf);
 

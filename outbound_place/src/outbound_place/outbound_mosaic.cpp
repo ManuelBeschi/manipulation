@@ -340,6 +340,7 @@ namespace pickplace
   void OutboundMosaic::placeObjectGoalCb(const manipulation_msgs::PlaceObjectsGoalConstPtr& goal,
                                          const std::string& group_name)
   {
+    ros::Time t0=ros::Time::now();
     std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>> as=m_as.at(group_name);
 
     manipulation_msgs::PlaceObjectsResult action_res;
@@ -412,6 +413,8 @@ namespace pickplace
                                                                                               result,
                                                                                               approach_slot_jconf);
 
+    ros::Time t_approach_plan=ros::Time::now();
+    ROS_DEBUG("plan  approach movement in %f second",(t_approach_plan-t0).toSec());
     if (!result)
     {
       action_res.result=manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
@@ -420,16 +423,15 @@ namespace pickplace
       return;
     }
 
-    if (!wait(group_name))
-    {
-      action_res.result=manipulation_msgs::PlaceObjectsResult::TrajectoryError;
-      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
-      as->setAborted(action_res,"error in trajectory execution");
-      return;
-    }
+
+
     tf::poseEigenToMsg(T_w_as,target.pose);
     m_target_pub.publish(target);
+
     execute(group_name,approac_pick_plan);
+
+    ros::Time t_approach_execute=ros::Time::now();
+    ROS_DEBUG("execute approach movement in %f second",(t_approach_execute-t_approach_plan).toSec());
 
 
     Eigen::VectorXd slot_jconf;
@@ -446,6 +448,8 @@ namespace pickplace
       as->setAborted(action_res,"error in planning for placing");
       return;
     }
+    ros::Time t_pick_plan=ros::Time::now();
+    ROS_DEBUG("plan pick movement in %f second",(t_pick_plan-t_approach_execute).toSec());
 
     if (!wait(group_name))
     {
@@ -454,9 +458,16 @@ namespace pickplace
       as->setAborted(action_res,"error in trajectory execution");
       return;
     }
+    ros::Time t_approach_wait=ros::Time::now();
+    ROS_DEBUG("wait for approach movement finish in %f second",(t_approach_wait-t_pick_plan).toSec());
+
+
     tf::poseEigenToMsg(T_w_s,target.pose);
     m_target_pub.publish(target);
     execute(group_name,plan_plan);
+    ros::Time t_pick_execute=ros::Time::now();
+    ROS_DEBUG("execute approach movement in %f second",(t_pick_execute-t_approach_wait).toSec());
+
     if (!wait(group_name))
     {
       action_res.result=manipulation_msgs::PlaceObjectsResult::TrajectoryError;
@@ -464,6 +475,8 @@ namespace pickplace
       as->setAborted(action_res,"error in trajectory execution");
       return;
     }
+    ros::Time t_pick_wait=ros::Time::now();
+    ROS_DEBUG("execute approach movement in %f second",(t_pick_wait-t_pick_execute).toSec());
 
     ros::Duration(0.5).sleep();
 
@@ -514,6 +527,11 @@ namespace pickplace
       return;
     }
 
+
+    tf::poseEigenToMsg(T_w_as,target.pose);
+    m_target_pub.publish(target);
+    execute(group_name,return_plan);
+
     if (!wait(group_name))
     {
       action_res.result=manipulation_msgs::PlaceObjectsResult::TrajectoryError;
@@ -521,10 +539,6 @@ namespace pickplace
       as->setAborted(action_res,"error in trajectory execution");
       return;
     }
-    tf::poseEigenToMsg(T_w_as,target.pose);
-    m_target_pub.publish(target);
-    execute(group_name,return_plan);
-
     action_res.result=manipulation_msgs::PlaceObjectsResult::Success;
     as->setSucceeded(action_res,"ok");
 
@@ -640,7 +654,7 @@ namespace pickplace
     req.allowed_planning_time=5;
     robot_state::RobotState goal_state(m_kinematic_model);
 
-    std::vector<Eigen::VectorXd> sols=m_approach_slot_configurations.at(group_name).at(place_id);
+    std::vector<Eigen::VectorXd> sols=m_slot_configurations.at(group_name).at(place_id);
 
 
     for (const Eigen::VectorXd& goal: sols)
@@ -744,15 +758,26 @@ namespace pickplace
 
   bool OutboundMosaic::wait(const std::string& group_name)
   {
-    ROS_INFO("Waiting");
+    ros::Time t0=ros::Time::now();
     while (std::isnan(m_fjt_result.at(group_name)))
+    {
       ros::Duration(0.01).sleep();
+
+      if ((ros::Time::now()-t0).toSec()>600)
+      {
+        ROS_ERROR("%s is waiting more than ten minutes, stop it",group_name.c_str());
+        return false;
+      }
+      if ((ros::Time::now()-t0).toSec()>10)
+        ROS_WARN_THROTTLE(10,"%s is waiting for %f seconds",group_name.c_str(),(ros::Time::now()-t0).toSec());
+    }
     return !std::isnan(m_fjt_result.at(group_name));
   }
 
   void OutboundMosaic::doneCb(const actionlib::SimpleClientGoalState &state, const control_msgs::FollowJointTrajectoryResultConstPtr &result, const std::string &group_name)
   {
     m_fjt_result.at(group_name)=result->error_code;
+    ROS_DEBUG("%s has done",group_name.c_str());
     if (result->error_code<0)
     {
       ROS_ERROR("error executing %s/follow_joint_trajectory: %s",group_name.c_str(),result->error_string.c_str());

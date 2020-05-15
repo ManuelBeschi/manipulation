@@ -161,8 +161,7 @@ bool PickObjects::addObjectCb(manipulation_msgs::AddObjects::Request& req,
       poses.insert(p);
     }
     ObjectPtr obj_ptr=createObject(obj.type,obj.id,req.inbound_box_name,poses);
-    if (!obj_ptr)
-      continue;
+
 
   }
   res.results=manipulation_msgs::AddObjects::Response::Success;
@@ -191,6 +190,8 @@ bool PickObjects::addBoxCb(manipulation_msgs::AddBox::Request &req, manipulation
 moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproachSlot(const std::string& group_name,
                                                                                      const Eigen::VectorXd& starting_jconf,
                                                                                      const Eigen::Affine3d& approach_pose,
+                                                                                     const ObjectPtr& selected_object,
+                                                                                     const GraspPosePtr& selected_grasp_pose,
                                                                                      moveit::planning_interface::MoveItErrorCode& result,
                                                                                      Eigen::VectorXd& slot_jconf)
 {
@@ -217,7 +218,24 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
   req.allowed_planning_time=5;
   robot_state::RobotState goal_state(m_kinematic_model);
 
-  std::vector<Eigen::VectorXd> sols;
+
+  std::vector<Eigen::VectorXd> sols=selected_grasp_pose->getApproachConfiguration();
+//  for (const GraspPosePtr& grasp_pose: selected_object->getGraspPoses(group_name))
+//  {
+//    if (!grasp_pose->getToolName().compare(tool_name))
+//    {
+//      goal_state.setJointGroupPositions(jmg, grasp_pose->getConfiguration());
+//      goal_state.updateCollisionBodyTransforms();
+//      if (!m_planning_scene.at(group_name)->isStateValid(goal_state))
+//        continue;
+//      moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
+//      req.goal_constraints.push_back(joint_goal);
+//      if (ik_goal++>=max_ik_goal_number)
+//        break;
+
+//    }
+//  }
+
   if (!ik(group_name,approach_pose,sols))
   {
     ROS_ERROR("No Ik solution for approach");
@@ -237,7 +255,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
     req.goal_constraints.push_back(joint_goal);
 
   }
-  ROS_PROTO("Found %zu solution",sols.size());
+  ROS_DEBUG("Found %zu solutions for approach slots",sols.size());
   if (req.goal_constraints.size()==0)
   {
     ROS_ERROR("Inbound server: no valid goals");
@@ -393,6 +411,8 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
   moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(group_name,
                                                                                       selected_grasp_pose->getConfiguration(),
                                                                                       T_w_approach,
+                                                                                      selected_object,
+                                                                                      selected_grasp_pose,
                                                                                       result,
                                                                                       approach_jconf);
 
@@ -535,27 +555,42 @@ ObjectPtr PickObjects::createObject(const std::string& type,
   }
 
   InboundBoxPtr box=findBox(box_name)->second;
-
   for (const std::string& group_name: m_group_names)
   {
+    ROS_INFO("adding object %s to box %s for group %s",obj->getType().c_str(),box->getName().c_str(),group_name.c_str());
     for (const auto& pose : poses)
     {
       if (m_tool_names.at(group_name).compare(pose.first))
         continue;
 
-      std::vector<Eigen::VectorXd> sols=box->getConfigurations(group_name);
+      Eigen::Affine3d T_w_approach=pose.second;
+      T_w_approach.translation()(2)+=box->getHeight();
+
+      std::vector<Eigen::VectorXd> approach_sols=box->getConfigurations(group_name);
+      if (!ik(group_name,T_w_approach,approach_sols,approach_sols.size()))
+      {
+        ROS_INFO("no solutions to approach slots");
+        continue;
+      }
+      std::vector<Eigen::VectorXd> sols=approach_sols;
+
       if (ik(group_name,pose.second,sols,sols.size()))
       {
         for (const Eigen::VectorXd sol: sols)
         {
-          GraspPosePtr grasp_pose=std::make_shared<GraspPose>(sol,pose.first,pose.second);
+
+          GraspPosePtr grasp_pose=std::make_shared<GraspPose>(sol,approach_sols,pose.first,pose.second,T_w_approach);
           obj->add(group_name,grasp_pose);
+
+
         }
       }
     }
   }
-  if (box->addObject(obj))
+  if (!box->addObject(obj))
     obj.reset();
+
+  ROS_INFO("add object %s to box %s",obj->getType().c_str(),box->getName().c_str());
   return obj;
 
 }
@@ -635,6 +670,9 @@ bool PickObjects::ik(const std::string& group_name, Eigen::Affine3d T_w_a, std::
     if (state.setFromIK(jmg,(Eigen::Isometry3d)T_w_a.matrix()))
     {
       if (!state.satisfiesBounds())
+        continue;
+      state.updateCollisionBodyTransforms();
+      if (!m_planning_scene.at(group_name)->isStateValid(state))
         continue;
       Eigen::VectorXd js;
       state.copyJointGroupPositions(group_name,js);
@@ -912,8 +950,19 @@ void PickObjects::doneCb(const actionlib::SimpleClientGoalState &state, const co
 
 bool  PickObjects::wait(const std::string& group_name)
 {
+  ros::Time t0=ros::Time::now();
   while (std::isnan(m_fjt_result.at(group_name)))
+  {
     ros::Duration(0.01).sleep();
+
+    if ((ros::Time::now()-t0).toSec()>600)
+    {
+      ROS_ERROR("%s is waiting more than 10 minutes, stop it",group_name.c_str());
+      return false;
+    }
+    if ((ros::Time::now()-t0).toSec()>10)
+      ROS_WARN_THROTTLE(10,"%s is waiting for %f seconds",group_name.c_str(),(ros::Time::now()-t0).toSec());
+  }
   return !std::isnan(m_fjt_result.at(group_name));
 }
 

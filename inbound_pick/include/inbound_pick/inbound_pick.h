@@ -42,13 +42,18 @@ protected:
   std::string m_tool_name;
   Eigen::VectorXd m_jconf;
   Eigen::Affine3d m_T_w_g;
+  std::vector<Eigen::VectorXd> m_approach_jconf;
+  Eigen::Affine3d m_T_w_a;
+
 public:
   /* jconf: joint configuration to pick the object
    */
-  GraspPose(const Eigen::VectorXd& jconf, const std::string& tool_name, const Eigen::Affine3d& T_w_g);
+  GraspPose(const Eigen::VectorXd& jconf, const std::vector<Eigen::VectorXd>& approach_jconf, const std::string& tool_name, const Eigen::Affine3d& T_w_g, const Eigen::Affine3d& T_w_a);
   std::string getToolName(){return m_tool_name;}
   Eigen::VectorXd getConfiguration(){return m_jconf;}
+  std::vector<Eigen::VectorXd> getApproachConfiguration(){return m_approach_jconf;}
   Eigen::Affine3d getPose(){return m_T_w_g;}
+  Eigen::Affine3d getApproachPose(){return m_T_w_g;}
 
 };
 typedef std::shared_ptr<GraspPose> GraspPosePtr;
@@ -58,6 +63,7 @@ protected:
   std::string m_type;
   std::string m_id;
   std::map<std::string,std::vector<GraspPosePtr>> m_grasp_poses;
+
 public:
   Object(const std::string& type);
 
