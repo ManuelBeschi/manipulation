@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <moveit_msgs/AttachedCollisionObject.h>
-
+#include <mutex>
 #define ROS_PROTO(...) ROS_LOG(::ros::console::levels::Debug, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
 #define ROS_PROTO_STREAM(...) ROS_LOG_STREAM(::ros::console::levels::Debug, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
 
@@ -54,7 +54,6 @@ public:
   std::vector<Eigen::VectorXd> getApproachConfiguration(){return m_approach_jconf;}
   Eigen::Affine3d getPose(){return m_T_w_g;}
   Eigen::Affine3d getApproachPose(){return m_T_w_g;}
-
 };
 typedef std::shared_ptr<GraspPose> GraspPosePtr;
 
@@ -87,6 +86,7 @@ protected:
   Eigen::Affine3d m_T_w_box_a;
   double m_height;
   unsigned int m_id=0;
+  std::mutex m_mutex;
 
   void assignId();
 public:
@@ -135,6 +135,8 @@ public:
   const double& getHeight(){return m_height;}
 
   friend std::ostream& operator<<  (std::ostream& os, const InboundBox& box);
+
+  std::mutex& getMutex(){return m_mutex;}
 
 };
 

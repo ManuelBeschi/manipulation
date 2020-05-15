@@ -330,6 +330,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
   pickplace::ObjectPtr selected_object;
   pickplace::GraspPosePtr selected_grasp_pose;
 
+  selected_box->getMutex().lock();
   moveit::planning_interface::MoveGroupInterface::Plan pick_plan=planToObject(group_name,
                                                                               type_names,
                                                                               selected_box,
@@ -345,13 +346,15 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     action_res.result=manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
     ROS_ERROR("error in plan to best object in the box, code = %d",result.val);
     as->setAborted(action_res,"error in planning to object");
+    selected_box->getMutex().unlock();
     return;
   }
 
   if (!selected_box->removeObject(selected_object->getId()))
+  {
     ROS_WARN("unable to remove object");
-
-
+  }
+  selected_box->getMutex().unlock();
 
   if (!wait(group_name))
   {

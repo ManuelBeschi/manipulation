@@ -420,6 +420,7 @@ namespace pickplace
       action_res.result=manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
       ROS_ERROR("error in plan for placing slot, code = %d",result.val);
       as->setAborted(action_res,"error in planning for placing");
+      m_slot_busy.at(place_id)=false;
       return;
     }
 
