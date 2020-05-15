@@ -65,7 +65,7 @@ protected:
 
   robot_model::RobotModelPtr m_kinematic_model;
   std::shared_ptr<planning_scene::PlanningScene> m_planning_scene;
-  planning_pipeline::PlanningPipelinePtr m_planning_pipeline;
+  std::map<std::string,planning_pipeline::PlanningPipelinePtr> m_planning_pipeline;
 
   std::vector<std::string> m_group_names;
   std::map<std::string,moveit::planning_interface::MoveGroupInterfacePtr> m_groups;
@@ -73,7 +73,6 @@ protected:
   std::map<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::GoToAction>>> m_as;
   std::map<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>> m_fjt_clients;
 
-  std::string m_planner_plugin_name;
   std::vector<std::string> m_request_adapters;
   std::map<std::string,double> m_fjt_result;
 

@@ -74,8 +74,7 @@ protected:
 
   std::shared_ptr<planning_scene::PlanningScene> m_planning_scene;
   robot_model::RobotModelPtr m_kinematic_model;
-  planning_pipeline::PlanningPipelinePtr m_planning_pipeline;
-  std::string m_planner_plugin_name;
+  std::map<std::string,planning_pipeline::PlanningPipelinePtr> m_planning_pipeline;
   std::vector<std::string> m_request_adapters;
 
 
