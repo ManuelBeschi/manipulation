@@ -407,13 +407,15 @@ namespace pickplace
     Eigen::VectorXd actual_jconf;
     group->getCurrentState()->copyJointGroupPositions(group_name,actual_jconf);
     Eigen::VectorXd approach_slot_jconf;
+    ros::Time t_approach_plan_init=ros::Time::now();
+
     moveit::planning_interface::MoveGroupInterface::Plan approac_pick_plan=planToApproachSlot(group_name,
                                                                                               place_id,
                                                                                               actual_jconf,
                                                                                               result,
                                                                                               approach_slot_jconf);
 
-    ros::Time t_approach_plan=ros::Time::now();
+
     ROS_DEBUG("plan  approach movement in %f second",(t_approach_plan-t0).toSec());
     if (!result)
     {
@@ -423,7 +425,9 @@ namespace pickplace
       m_slot_busy.at(place_id)=false;
       return;
     }
-
+    ros::Time t_approach_plan=ros::Time::now();
+    action_res.planning_duration+=t_approach_plan-t_approach_plan_init;
+    action_res.expected_duration+=approac_pick_plan.trajectory_.joint_trajectory.points.back().time_from_start;
 
 
     tf::poseEigenToMsg(T_w_as,target.pose);
@@ -436,6 +440,7 @@ namespace pickplace
 
 
     Eigen::VectorXd slot_jconf;
+    ros::Time t_pick_plan_init=ros::Time::now();
     moveit::planning_interface::MoveGroupInterface::Plan plan_plan=planToSlot(group_name,
                                                                               place_id,
                                                                               approach_slot_jconf,
@@ -450,6 +455,9 @@ namespace pickplace
       return;
     }
     ros::Time t_pick_plan=ros::Time::now();
+    action_res.planning_duration+=t_pick_plan-t_pick_plan_init;
+    action_res.expected_duration+=plan_plan.trajectory_.joint_trajectory.points.back().time_from_start;
+
     ROS_DEBUG("plan pick movement in %f second",(t_pick_plan-t_approach_execute).toSec());
 
     if (!wait(group_name))
@@ -504,7 +512,7 @@ namespace pickplace
     std_srvs::SetBool grasp_req;
     grasp_req.request.data=0;
     m_grasp_srv.call(grasp_req);
-    ros::Duration(1).sleep();
+    ros::Duration(0.5).sleep();
 
 
     if (!group->startStateMonitor(2))
@@ -514,6 +522,8 @@ namespace pickplace
       as->setAborted(action_res,"unable to get actual state");
       return;
     }
+
+    ros::Time return_time_init=ros::Time::now();
     moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(group_name,
                                                                                         place_id,
                                                                                         slot_jconf,
@@ -527,6 +537,9 @@ namespace pickplace
       as->setAborted(action_res,"error in planning back to box");
       return;
     }
+    ros::Time return_time=ros::Time::now();
+    action_res.planning_duration+=return_time-return_time_init;
+    action_res.expected_duration+=return_plan.trajectory_.joint_trajectory.points.back().time_from_start;
 
 
     tf::poseEigenToMsg(T_w_as,target.pose);
@@ -541,6 +554,8 @@ namespace pickplace
       return;
     }
     action_res.result=manipulation_msgs::PlaceObjectsResult::Success;
+    action_res.actual_duration=ros::Time::now()-t0;
+    action_res.hrc_overhead=action_res.expected_duration/action_res.actual_duration;
     as->setSucceeded(action_res,"ok");
 
     return;

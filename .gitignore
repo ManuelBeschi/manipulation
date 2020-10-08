@@ -1,3 +1,4 @@
 *~
-*.txt.user
+*.txt.user*
 *.kdev4
+*.autosave
