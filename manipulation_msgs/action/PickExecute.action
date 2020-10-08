@@ -1,5 +1,14 @@
 string object_frame
 ----
-bool success
+duration expected_duration
+duration actual_duration
+int32 trials
+float64 hrc_overhead
+float64 estimated_hrc_overhead
+
+int32 error_code
+int32 SUCCESSFUL = 0
+int32 INVALID_GOAL = -1
+int32 PLANNING_FAIL = -2
 ----
 string state

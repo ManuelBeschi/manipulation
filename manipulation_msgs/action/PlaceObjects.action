@@ -10,6 +10,12 @@ int8 SceneError=-4
 int8 NoAvailableTrajectories=-5
 int8 TrajectoryError=-6
 int8 Success=0
+
+duration expected_duration
+duration actual_duration
+int32 trials
+float64 hrc_overhead
+float64 estimated_hrc_overhead
 ---
 int8 phase
 int8 GoingToApproach=1
