@@ -128,7 +128,7 @@ public:
                                                               Eigen::VectorXd& final_configuration);
 
 protected:
-    ros::NodeHandle m_nh;
+  ros::NodeHandle m_nh;
 
   std::map<std::string,LocationPtr> m_locations;
 

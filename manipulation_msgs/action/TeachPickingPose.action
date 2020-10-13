@@ -1,9 +1,0 @@
-string object_frame
-string tool_frame
-string world_frame
-string teaching_configuration
-----
-bool success
-geometry_msgs/Transform transform_object_from_tool
-----
-

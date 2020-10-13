@@ -1,7 +1,0 @@
-string object_frame
-----
-bool pickable
-time required_time
-time starting_time
-----
-string state

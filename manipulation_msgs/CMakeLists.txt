@@ -26,9 +26,6 @@ add_service_files(
   )
 add_action_files(
   FILES
-  PickPlan.action
-  PickExecute.action
-  TeachPickingPose.action
   PickObjects.action
   PlaceObjects.action
   GoTo.action
