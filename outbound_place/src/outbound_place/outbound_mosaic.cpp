@@ -348,6 +348,7 @@ namespace pickplace
     moveit::planning_interface::MoveItErrorCode result;
 
 
+    /* Preliminary check */
     if (!m_init)
     {
       ROS_ERROR("outbound pallet is not initialized well");
@@ -392,6 +393,9 @@ namespace pickplace
     moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
 
 
+    /* ===========================
+     * Moving to approach position
+     * ===========================*/
     Eigen::Affine3d T_w_as; // world <- approach to slot
     Eigen::Affine3d T_w_s; // world <- slot
     T_w_s=m_slot_map.at(place_id);
@@ -416,6 +420,7 @@ namespace pickplace
                                                                                               approach_slot_jconf);
 
 
+    ros::Time t_approach_plan=ros::Time::now();
     ROS_DEBUG("plan  approach movement in %f second",(t_approach_plan-t0).toSec());
     if (!result)
     {
@@ -425,9 +430,8 @@ namespace pickplace
       m_slot_busy.at(place_id)=false;
       return;
     }
-    ros::Time t_approach_plan=ros::Time::now();
     action_res.planning_duration+=t_approach_plan-t_approach_plan_init;
-    action_res.expected_duration+=approac_pick_plan.trajectory_.joint_trajectory.points.back().time_from_start;
+    action_res.expected_execution_duration+=approac_pick_plan.trajectory_.joint_trajectory.points.back().time_from_start;
 
 
     tf::poseEigenToMsg(T_w_as,target.pose);
@@ -439,6 +443,9 @@ namespace pickplace
     ROS_DEBUG("execute approach movement in %f second",(t_approach_execute-t_approach_plan).toSec());
 
 
+    /* ===========================
+     * Moving to slot
+     * ===========================*/
     Eigen::VectorXd slot_jconf;
     ros::Time t_pick_plan_init=ros::Time::now();
     moveit::planning_interface::MoveGroupInterface::Plan plan_plan=planToSlot(group_name,
@@ -456,7 +463,7 @@ namespace pickplace
     }
     ros::Time t_pick_plan=ros::Time::now();
     action_res.planning_duration+=t_pick_plan-t_pick_plan_init;
-    action_res.expected_duration+=plan_plan.trajectory_.joint_trajectory.points.back().time_from_start;
+    action_res.expected_execution_duration+=plan_plan.trajectory_.joint_trajectory.points.back().time_from_start;
 
     ROS_DEBUG("plan pick movement in %f second",(t_pick_plan-t_approach_execute).toSec());
 
@@ -487,6 +494,11 @@ namespace pickplace
     ros::Time t_pick_wait=ros::Time::now();
     ROS_DEBUG("execute approach movement in %f second",(t_pick_wait-t_pick_execute).toSec());
 
+
+    /* ===========================
+     * Release object
+     * ===========================*/
+    ros::Time t_release_obj_init=ros::Time::now();
     ros::Duration(0.5).sleep();
 
     object_loader_msgs::detachObject detach_srv;
@@ -514,6 +526,9 @@ namespace pickplace
     m_grasp_srv.call(grasp_req);
     ros::Duration(0.5).sleep();
 
+    ros::Time t_release_obj=ros::Time::now();
+
+    action_res.release_object_duration=t_release_obj-t_release_obj_init;
 
     if (!group->startStateMonitor(2))
     {
@@ -523,6 +538,9 @@ namespace pickplace
       return;
     }
 
+    /* ===========================
+     * Return to approach position
+     * ===========================*/
     ros::Time return_time_init=ros::Time::now();
     moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(group_name,
                                                                                         place_id,
@@ -539,7 +557,7 @@ namespace pickplace
     }
     ros::Time return_time=ros::Time::now();
     action_res.planning_duration+=return_time-return_time_init;
-    action_res.expected_duration+=return_plan.trajectory_.joint_trajectory.points.back().time_from_start;
+    action_res.expected_execution_duration+=return_plan.trajectory_.joint_trajectory.points.back().time_from_start;
 
 
     tf::poseEigenToMsg(T_w_as,target.pose);
@@ -555,7 +573,6 @@ namespace pickplace
     }
     action_res.result=manipulation_msgs::PlaceObjectsResult::Success;
     action_res.actual_duration=ros::Time::now()-t0;
-    action_res.hrc_overhead=action_res.expected_duration/action_res.actual_duration;
     as->setSucceeded(action_res,"ok");
 
     return;

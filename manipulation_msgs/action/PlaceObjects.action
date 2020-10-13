@@ -14,9 +14,9 @@ int8 Success=0
 duration expected_execution_duration
 duration actual_duration
 duration planning_duration
+duration release_object_duration
 int32 trials
-float64 hrc_overhead
-float64 estimated_hrc_overhead
+duration estimated_hrc_execution_duration
 ---
 int8 phase
 int8 GoingToApproach=1
