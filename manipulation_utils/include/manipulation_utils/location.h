@@ -122,7 +122,7 @@ public:
 
   moveit::planning_interface::MoveGroupInterface::Plan planTo(const std::string& group_name,
                                                               const std::string& location_name,
-                                                              const Destination& destination,
+                                                              const Location::Destination& destination,
                                                               const Eigen::VectorXd& starting_jconf,
                                                               moveit::planning_interface::MoveItErrorCode& result,
                                                               Eigen::VectorXd& final_configuration);

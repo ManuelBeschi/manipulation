@@ -287,7 +287,7 @@ moveit::planning_interface::MoveGroupInterface::Plan LocationManager::planTo(con
       sols=m_locations.at(location_name)->getApproachIk(group_name);
       break;
     case Location::Slot:
-      sols=m_locations.at(location_name)->getSlotIk(group_name);
+      sols=m_locations.at(location_name)->getLocationIk(group_name);
       break;
     case Location::Leave:
       sols=m_locations.at(location_name)->getLeaveIk(group_name);
