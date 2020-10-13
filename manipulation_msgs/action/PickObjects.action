@@ -14,6 +14,7 @@ int8 Success=0
 duration expected_execution_duration
 duration actual_duration
 duration planning_duration
+duration grasping_object_duration
 int32 trials
 duration estimated_hrc_execution_duration
 
