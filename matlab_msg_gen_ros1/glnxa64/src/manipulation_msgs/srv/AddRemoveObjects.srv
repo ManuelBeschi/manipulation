@@ -1,8 +1,0 @@
-string inbound_box_name
-manipulation_msgs/Object[] add_objects
-manipulation_msgs/Object[] remove_objects
----
-int8 results
-int8 Success=0
-int8 ObjectNotFound=-1
-

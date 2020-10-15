@@ -1,5 +1,0 @@
-string inbound_box_name
-geometry_msgs/Pose box_pose
-float64 height
----
-
