@@ -87,6 +87,12 @@ bool InboundBox::addObjects(const std::vector<ObjectPtr> &objects)
   return true;
 }
 
+void InboundBox::removeAllObjects()
+{
+  m_objects.clear();
+  m_ids_by_type.clear();
+}
+
 bool InboundBox::removeObject(const std::string &object_id)
 {
   std::map<std::string,ObjectPtr>::iterator it;

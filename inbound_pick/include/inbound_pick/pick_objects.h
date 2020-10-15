@@ -99,6 +99,7 @@ protected:
   ros::ServiceClient m_grasp_srv;
   ros::ServiceClient m_attach_obj_;
   ros::Publisher m_target_pub;
+  ros::ServiceServer m_reset_box_srv;
 
   Eigen::Affine3d m_T_w_as; // world <- approach to slot
   Eigen::Affine3d m_T_w_s;  // world <- slot
@@ -182,6 +183,8 @@ public:
 
   void pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConstPtr& goal,
                         const std::string& group_name);
+
+  bool resetBoxesCb(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
 
   friend std::ostream& operator<<  (std::ostream& os, const PickObjects& pick_objs);
 

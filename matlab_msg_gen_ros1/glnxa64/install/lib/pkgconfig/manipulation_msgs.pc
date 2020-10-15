@@ -1,0 +1,8 @@
+prefix=/home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install
+
+Name: manipulation_msgs
+Description: Description of manipulation_msgs
+Version: 0.0.0
+Cflags: -I/home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include
+Libs: -L/home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib 
+Requires: message_runtime geometry_msgs roscpp

@@ -117,6 +117,7 @@ bool PickObjects::init()
   m_add_obj_srv=m_nh.advertiseService("add_objects",&PickObjects::addObjectCb,this);
   m_add_box_srv=m_nh.advertiseService("add_box",&PickObjects::addBoxCb,this);
   m_list_objects_srv=m_nh.advertiseService("list_objects",&PickObjects::listObjects,this);
+  m_reset_box_srv=m_nh.advertiseService("inbound/reset_box",&PickObjects::resetBoxesCb,this);
 
   m_attach_obj_=m_nh.serviceClient<object_loader_msgs::attachObject>("attach_object_to_link");
 
@@ -991,5 +992,18 @@ bool  PickObjects::wait(const std::string& group_name)
   return !std::isnan(m_fjt_result.at(group_name));
 }
 
+bool PickObjects::resetBoxesCb(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res)
+{
+  if (req.data)
+  {
+    for (std::pair<std::string,InboundBoxPtr> box: m_boxes)
+    {
+      box.second->getMutex().lock();
+      box.second->removeAllObjects();
+      box.second->getMutex().unlock();
+    }
+  }
+  return true;
+}
 
 }

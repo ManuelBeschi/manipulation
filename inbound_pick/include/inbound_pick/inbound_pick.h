@@ -134,6 +134,8 @@ public:
 
   const double& getHeight(){return m_height;}
 
+  void removeAllObjects();
+
   friend std::ostream& operator<<  (std::ostream& os, const InboundBox& box);
 
   std::mutex& getMutex(){return m_mutex;}

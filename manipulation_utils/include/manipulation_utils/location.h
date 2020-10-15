@@ -50,6 +50,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <eigen_conversions/eigen_msg.h>
 #include <rosparam_utilities/rosparam_utilities.h>
 #include <tf_conversions/tf_eigen.h>
+#include <manipulation_msgs/Location.h>
+#include <manipulation_msgs/AddLocations.h>
+#include <manipulation_msgs/RemoveLocations.h>
 
 #define N_ITER 30
 #define N_MAX_ITER 2000
@@ -64,35 +67,36 @@ class LocationManager;
 class Location
 {
 public:
-  enum Status { empty, full, error};
+//  enum Status { empty, full, error};
   enum Destination { Approach, Slot, Leave};
   Location(const std::string& name,
            const Eigen::Affine3d& T_w_location,
            const Eigen::Affine3d& T_w_approach,
-           const Eigen::Affine3d& T_w_leave,
-           const Status& status=empty);
+           const Eigen::Affine3d& T_w_leave);
+
+  Location(const manipulation_msgs::Location& msg);
 
   friend class LocationManager;
 
   void addLocationIk( const std::string& group_name, const std::vector<Eigen::VectorXd>& solutions);
   void addApproachIk( const std::string& group_name, const std::vector<Eigen::VectorXd>& solutions);
-  void addLeaveIk(    const std::string& group_name, const std::vector<Eigen::VectorXd>& solutions);
+  void addReturnIk(    const std::string& group_name, const std::vector<Eigen::VectorXd>& solutions);
 
   bool canBePickedBy(const std::string& group_name);
   std::vector<Eigen::VectorXd> getLocationIk(const std::string& group_name){return m_location_configurations.at(group_name);}
   std::vector<Eigen::VectorXd> getApproachIk(const std::string& group_name){return m_approach_location_configurations.at(group_name);}
-  std::vector<Eigen::VectorXd> getLeaveIk   (const std::string& group_name){return m_leave_location_configurations.at(group_name);}
+  std::vector<Eigen::VectorXd> getReturnIk  (const std::string& group_name){return m_return_location_configurations.at(group_name);}
 
 protected:
-  Status m_status;
+//  Status m_status;
   std::string m_name;
   Eigen::Affine3d m_T_w_location;  // world <- location
   Eigen::Affine3d m_T_w_approach;  // world <- approach
-  Eigen::Affine3d m_T_w_leave;     // world <- leave
+  Eigen::Affine3d m_T_w_return;    // world <- return
 
   std::map<std::string,std::vector<Eigen::VectorXd>> m_location_configurations;
   std::map<std::string,std::vector<Eigen::VectorXd>> m_approach_location_configurations;
-  std::map<std::string,std::vector<Eigen::VectorXd>> m_leave_location_configurations;
+  std::map<std::string,std::vector<Eigen::VectorXd>> m_return_location_configurations;
 
 };
 typedef shared_ptr_namespace::shared_ptr< Location   > LocationPtr;
@@ -103,15 +107,20 @@ public:
 
   LocationManager( const std::map<std::string,std::shared_ptr<planning_scene::PlanningScene>>& planning_scene,
                    const std::map<std::string,moveit::planning_interface::MoveGroupInterfacePtr>& groups,
-                   const std::map<std::string,moveit::core::JointModelGroup*>& joint_models);
+                   const std::map<std::string,moveit::core::JointModelGroup*>& joint_models,
+                   const ros::NodeHandle& nh);
   bool addLocation(LocationPtr& location);
   bool removeLocation(const std::string& location_name);
-  bool setLocationStatus(const std::string& location_name, const Location::Status& status);
-  Location::Status getLocationStatus(const std::string& location_name);
+  //bool setLocationStatus(const std::string& location_name, const Location::Status& status);
+  //Location::Status getLocationStatus(const std::string& location_name);
+  //bool setLocationStatusCb();
 
-  bool addLocationCb();
-  bool setLocationStatusCb();
-  bool removeLocationCb();
+  bool addLocationsCb(manipulation_msgs::AddLocations::Request& req,
+                      manipulation_msgs::AddLocations::Response& res);
+
+  bool removeLocationsCb(manipulation_msgs::RemoveLocations::Request& req,
+                         manipulation_msgs::RemoveLocations::Request& res);
+
 
   bool getConfigurationForGroup(const std::string& group_name,
                                 const std::vector<std::string>& location_names,
@@ -129,6 +138,9 @@ public:
 
 protected:
   ros::NodeHandle m_nh;
+  ros::ServiceServer m_add_loc_srv;
+  ros::ServiceServer m_remove_loc_srv;
+
 
   std::map<std::string,LocationPtr> m_locations;
 
@@ -144,4 +156,5 @@ protected:
           unsigned int ntrial=N_ITER);
 
 };
+
 }  // end namespace pickplace

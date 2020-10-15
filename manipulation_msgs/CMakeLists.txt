@@ -16,11 +16,14 @@ add_message_files(
   Grasp.msg
   Object.msg
   PickBox.msg
+  Location.msg
   )
 add_service_files(
   FILES
   AddBox.srv
   AddObjects.srv
+  AddLocations.srv
+  RemoveLocations.srv
   AddRemoveObjects.srv
   ListOfObjects.srv
   )

@@ -1,0 +1,442 @@
+CMake Warning (dev) in CMakeLists.txt:
+  No project() command is present.  The top-level CMakeLists.txt file must
+  contain a literal, direct call to the project() command.  Add a line of
+  code such as
+
+    project(ProjectName)
+
+  near the top of the file, but after cmake_minimum_required().
+
+  CMake is pretending there is a "project(Project)" command on the first
+  line.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- The C compiler identification is GNU 7.5.0
+-- The CXX compiler identification is GNU 7.5.0
+-- Check for working C compiler: /usr/bin/cc
+-- Check for working C compiler: /usr/bin/cc -- works
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Check for working CXX compiler: /usr/bin/c++
+-- Check for working CXX compiler: /usr/bin/c++ -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Using CATKIN_DEVEL_PREFIX: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel
+-- Using CMAKE_PREFIX_PATH: /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1;/usr/local/MATLAB/R2020b/toolbox/ros/mlroscpp/custom_messages
+-- This workspace overlays: /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1;/usr/local/MATLAB/R2020b/toolbox/ros/mlroscpp/custom_messages
+-- Found PythonInterp: /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 (found suitable version "2.7.17", minimum required is "2") 
+-- Using PYTHON_EXECUTABLE: /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2
+-- Using Debian Python package layout
+-- Using empy: /usr/bin/empy
+-- Using CATKIN_ENABLE_TESTING: off
+-- catkin 0.7.17
+-- BUILD_SHARED_LIBS is on
+-- BUILD_SHARED_LIBS is on
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- ~~  traversing 2 packages in topological order:
+-- ~~  - manipulation_msgs
+-- ~~  - pickplace_msgs
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- +++ processing catkin package: 'manipulation_msgs'
+-- ==> add_subdirectory(manipulation_msgs)
+-- Disabling the following message generators: geneus;genlisp;gennodejs
+-- Using these message generators: gencpp;genpy
+-- manipulation_msgs: 4 messages, 6 services
+-- +++ processing catkin package: 'pickplace_msgs'
+-- ==> add_subdirectory(pickplace_msgs)
+-- Disabling the following message generators: geneus;genlisp;gennodejs
+-- Using these message generators: gencpp;genpy
+-- pickplace_msgs: 3 messages, 2 services
+-- Configuring done
+-- Generating done
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    Boost_NAMESPACE
+
+
+-- Build files have been written to: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build
+[1/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/manipulation_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py manipulation_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/manipulation_msgs/srv/AddLocations.srv geometry_msgs/Point:manipulation_msgs/Location:geometry_msgs/Quaternion:geometry_msgs/Pose
+[2/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/manipulation_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py manipulation_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/manipulation_msgs/srv/AddObjects.srv geometry_msgs/Point:manipulation_msgs/Grasp:geometry_msgs/Quaternion:geometry_msgs/Pose:manipulation_msgs/Object
+[3/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/manipulation_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py manipulation_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/manipulation_msgs/msg/PickBox.msg geometry_msgs/Point:manipulation_msgs/Grasp:geometry_msgs/Quaternion:geometry_msgs/Pose:manipulation_msgs/Object
+[4/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/manipulation_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py manipulation_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/manipulation_msgs/msg/Grasp.msg geometry_msgs/Point:geometry_msgs/Quaternion:geometry_msgs/Pose
+[5/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/manipulation_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py manipulation_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/manipulation_msgs/srv/ListOfObjects.srv
+[6/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/manipulation_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py manipulation_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/manipulation_msgs/msg/Location.msg geometry_msgs/Point:geometry_msgs/Quaternion:geometry_msgs/Pose
+[7/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/manipulation_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py manipulation_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/manipulation_msgs/srv/AddBox.srv geometry_msgs/Point:geometry_msgs/Quaternion:geometry_msgs/Pose
+[8/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/manipulation_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py manipulation_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/manipulation_msgs/msg/Object.msg geometry_msgs/Point:geometry_msgs/Quaternion:geometry_msgs/Pose:manipulation_msgs/Grasp
+[9/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/manipulation_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py manipulation_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/manipulation_msgs/srv/RemoveLocations.srv
+[10/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/manipulation_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py manipulation_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/manipulation_msgs/srv/AddRemoveObjects.srv geometry_msgs/Point:manipulation_msgs/Grasp:geometry_msgs/Quaternion:geometry_msgs/Pose:manipulation_msgs/Object
+[11/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/pickplace_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py pickplace_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/pickplace_msgs/msg/Object.msg pickplace_msgs/Grasp:geometry_msgs/Point:geometry_msgs/Quaternion:geometry_msgs/Pose
+[12/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/pickplace_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py pickplace_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/pickplace_msgs/srv/AddRemoveObjects.srv pickplace_msgs/Object:geometry_msgs/Point:geometry_msgs/Quaternion:geometry_msgs/Pose:pickplace_msgs/Grasp
+[13/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/pickplace_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py pickplace_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/pickplace_msgs/msg/Grasp.msg geometry_msgs/Point:geometry_msgs/Quaternion:geometry_msgs/Pose
+[14/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/pickplace_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py pickplace_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/pickplace_msgs/msg/PickBox.msg pickplace_msgs/Object:geometry_msgs/Point:geometry_msgs/Quaternion:geometry_msgs/Pose:pickplace_msgs/Grasp
+[15/153] cd /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/pickplace_msgs && /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build/catkin_generated/env_cached.sh /home/jacobi/.matlab/R2020b/ros1/glnxa64/venv/bin/python2 /usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py pickplace_msgs /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/pickplace_msgs/srv/ListOfObjects.srv geometry_msgs/Point:geometry_msgs/Pose:pickplace_msgs/PickBox:pickplace_msgs/Grasp:pickplace_msgs/Object:geometry_msgs/Quaternion
+[16/153] Generating C++ code from manipulation_msgs/PickBox.msg
+[17/153] Generating C++ code from manipulation_msgs/Grasp.msg
+[18/153] Generating C++ code from manipulation_msgs/Location.msg
+[19/153] Generating C++ code from manipulation_msgs/Object.msg
+[20/153] Generating C++ code from manipulation_msgs/AddLocations.srv
+[21/153] Generating C++ code from manipulation_msgs/AddBox.srv
+[22/153] Generating C++ code from manipulation_msgs/ListOfObjects.srv
+[23/153] Generating Python from MSG manipulation_msgs/Object
+[24/153] Generating Python from MSG manipulation_msgs/Grasp
+[25/153] Generating C++ code from manipulation_msgs/AddRemoveObjects.srv
+[26/153] Generating Python from MSG manipulation_msgs/PickBox
+[27/153] Generating Python from MSG manipulation_msgs/Location
+[28/153] Generating Python code from SRV manipulation_msgs/ListOfObjects
+[29/153] Generating C++ code from manipulation_msgs/AddObjects.srv
+[30/153] Generating Python code from SRV manipulation_msgs/AddLocations
+[31/153] Generating Python code from SRV manipulation_msgs/AddBox
+[32/153] Generating C++ code from manipulation_msgs/RemoveLocations.srv
+[33/153] Generating Python code from SRV manipulation_msgs/AddObjects
+[34/153] Generating Python from MSG pickplace_msgs/Grasp
+[35/153] Generating Python code from SRV manipulation_msgs/AddRemoveObjects
+[36/153] Generating Python from MSG pickplace_msgs/PickBox
+[37/153] Generating Python code from SRV manipulation_msgs/RemoveLocations
+[38/153] Generating Python from MSG pickplace_msgs/Object
+[39/153] Generating Python code from SRV pickplace_msgs/ListOfObjects
+[40/153] Generating Python code from SRV pickplace_msgs/AddRemoveObjects
+[41/153] Generating C++ code from pickplace_msgs/PickBox.msg
+[42/153] Generating Python msg __init__.py for manipulation_msgs
+[43/153] Generating C++ code from pickplace_msgs/Grasp.msg
+[44/153] Generating C++ code from pickplace_msgs/Object.msg
+[45/153] Generating Python srv __init__.py for manipulation_msgs
+[46/153] Generating Python msg __init__.py for pickplace_msgs
+[47/153] Generating Python srv __init__.py for pickplace_msgs
+[48/153] Generating C++ code from pickplace_msgs/ListOfObjects.srv
+[49/153] Generating C++ code from pickplace_msgs/AddRemoveObjects.srv
+[50/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_Grasp_common.cpp.o
+[51/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_Location_common.cpp.o
+[52/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_Object_publisher.cpp.o
+[53/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_Grasp_publisher.cpp.o
+[54/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_Grasp_subscriber.cpp.o
+[55/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_Location_publisher.cpp.o
+[56/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_Object_common.cpp.o
+[57/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_Location_subscriber.cpp.o
+[58/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_PickBox_publisher.cpp.o
+[59/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_PickBox_common.cpp.o
+[60/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_PickBox_subscriber.cpp.o
+[61/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_Object_subscriber.cpp.o
+[62/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddBox_request_common.cpp.o
+[63/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddBox_response_common.cpp.o
+[64/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_srv_AddBox_client.cpp.o
+[65/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_srv_AddBox_server.cpp.o
+[66/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddBoxRequest_publisher.cpp.o
+[67/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddBoxRequest_subscriber.cpp.o
+[68/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddBoxResponse_common.cpp.o
+[69/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddBoxRequest_common.cpp.o
+[70/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddLocations_response_common.cpp.o
+[71/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddBoxResponse_publisher.cpp.o
+[72/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddLocations_request_common.cpp.o
+[73/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddBoxResponse_subscriber.cpp.o
+[74/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_srv_AddLocations_server.cpp.o
+[75/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_srv_AddLocations_client.cpp.o
+[76/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddLocationsRequest_publisher.cpp.o
+[77/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddLocationsRequest_subscriber.cpp.o
+[78/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddLocationsResponse_publisher.cpp.o
+[79/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddLocationsResponse_subscriber.cpp.o
+[80/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddLocationsRequest_common.cpp.o
+[81/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddLocationsResponse_common.cpp.o
+[82/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddObjects_request_common.cpp.o
+[83/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddObjects_response_common.cpp.o
+[84/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_srv_AddObjects_client.cpp.o
+[85/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_srv_AddObjects_server.cpp.o
+[86/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddObjectsRequest_publisher.cpp.o
+[87/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddObjectsRequest_subscriber.cpp.o
+[88/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddObjectsResponse_publisher.cpp.o
+[89/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddObjectsResponse_subscriber.cpp.o
+[90/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddRemoveObjectsRequest_publisher.cpp.o
+[91/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddRemoveObjects_response_common.cpp.o
+[92/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddObjectsRequest_common.cpp.o
+[93/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_srv_AddRemoveObjects_client.cpp.o
+[94/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddRemoveObjects_request_common.cpp.o
+[95/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddObjectsResponse_common.cpp.o
+[96/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddRemoveObjectsRequest_subscriber.cpp.o
+[97/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_srv_AddRemoveObjects_server.cpp.o
+[98/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddRemoveObjectsResponse_publisher.cpp.o
+[99/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_AddRemoveObjectsResponse_subscriber.cpp.o
+[100/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddRemoveObjectsRequest_common.cpp.o
+[101/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_AddRemoveObjectsResponse_common.cpp.o
+[102/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_ListOfObjects_request_common.cpp.o
+[103/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_ListOfObjects_response_common.cpp.o
+[104/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_srv_ListOfObjects_client.cpp.o
+[105/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_srv_ListOfObjects_server.cpp.o
+[106/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_ListOfObjectsRequest_common.cpp.o
+[107/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_ListOfObjectsRequest_publisher.cpp.o
+[108/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_ListOfObjectsResponse_common.cpp.o
+[109/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_ListOfObjectsResponse_publisher.cpp.o
+[110/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_ListOfObjectsRequest_subscriber.cpp.o
+[111/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_RemoveLocations_request_common.cpp.o
+[112/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_RemoveLocations_response_common.cpp.o
+[113/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_ListOfObjectsResponse_subscriber.cpp.o
+[114/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_srv_RemoveLocations_client.cpp.o
+[115/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_srv_RemoveLocations_server.cpp.o
+[116/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_RemoveLocationsRequest_publisher.cpp.o
+[117/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_RemoveLocationsRequest_subscriber.cpp.o
+[118/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_RemoveLocationsResponse_publisher.cpp.o
+[119/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_msg_RemoveLocationsResponse_subscriber.cpp.o
+[120/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_RemoveLocationsRequest_common.cpp.o
+[121/153] Building CXX object manipulation_msgs/CMakeFiles/manipulation_msgs_matlab.dir/src/manipulation_msgs_RemoveLocationsResponse_common.cpp.o
+[122/153] Linking CXX shared library /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/libmanipulation_msgs_matlab.so
+[123/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_AddRemoveObjectsRequest_common.cpp.o
+[124/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_Grasp_common.cpp.o
+[125/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_Grasp_publisher.cpp.o
+[126/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_Grasp_subscriber.cpp.o
+[127/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_Object_common.cpp.o
+[128/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_Object_publisher.cpp.o
+[129/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_Object_subscriber.cpp.o
+[130/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_AddRemoveObjects_response_common.cpp.o
+[131/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_AddRemoveObjectsRequest_publisher.cpp.o
+[132/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_PickBox_publisher.cpp.o
+[133/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_PickBox_common.cpp.o
+[134/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_PickBox_subscriber.cpp.o
+[135/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_AddRemoveObjects_request_common.cpp.o
+[136/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_srv_AddRemoveObjects_client.cpp.o
+[137/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_srv_AddRemoveObjects_server.cpp.o
+[138/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_AddRemoveObjectsRequest_subscriber.cpp.o
+[139/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_AddRemoveObjectsResponse_publisher.cpp.o
+[140/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_AddRemoveObjectsResponse_subscriber.cpp.o
+[141/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_AddRemoveObjectsResponse_common.cpp.o
+[142/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_ListOfObjects_request_common.cpp.o
+[143/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_ListOfObjects_response_common.cpp.o
+[144/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_srv_ListOfObjects_client.cpp.o
+[145/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_srv_ListOfObjects_server.cpp.o
+[146/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_ListOfObjectsRequest_common.cpp.o
+[147/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_ListOfObjectsResponse_publisher.cpp.o
+[148/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_ListOfObjectsRequest_publisher.cpp.o
+[149/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_ListOfObjectsResponse_subscriber.cpp.o
+[150/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_ListOfObjectsResponse_common.cpp.o
+[151/153] Building CXX object pickplace_msgs/CMakeFiles/pickplace_msgs_matlab.dir/src/pickplace_msgs_msg_ListOfObjectsRequest_subscriber.cpp.o
+[152/153] Linking CXX shared library /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/libpickplace_msgs_matlab.so
+[152/153] Install the project...
+-- Install configuration: "Release"
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/_setup_util.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/env.sh
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/setup.bash
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/local_setup.bash
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/setup.sh
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/local_setup.sh
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/setup.zsh
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/local_setup.zsh
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/.rosinstall
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/msg/Grasp.msg
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/msg/Location.msg
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/msg/Object.msg
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/msg/PickBox.msg
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/srv/AddBox.srv
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/srv/AddLocations.srv
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/srv/AddObjects.srv
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/srv/AddRemoveObjects.srv
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/srv/ListOfObjects.srv
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/srv/RemoveLocations.srv
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/cmake/manipulation_msgs-msg-paths.cmake
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/Location.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/AddBoxResponse.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/ListOfObjectsRequest.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/RemoveLocationsResponse.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/AddBox.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/RemoveLocations.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/ListOfObjectsResponse.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/AddObjects.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/AddRemoveObjectsResponse.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/AddObjectsResponse.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/Grasp.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/PickBox.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/AddRemoveObjects.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/RemoveLocationsRequest.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/Object.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/AddRemoveObjectsRequest.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/AddLocationsRequest.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/AddBoxRequest.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/AddLocationsResponse.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/ListOfObjects.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/AddObjectsRequest.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/AddLocations.h
+Listing /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/__init__.py ...
+Listing /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/msg ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/msg/_Grasp.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/msg/_Location.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/msg/_Object.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/msg/_PickBox.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/msg/__init__.py ...
+Listing /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/srv ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/srv/_AddBox.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/srv/_AddLocations.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/srv/_AddObjects.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/srv/_AddRemoveObjects.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/srv/_ListOfObjects.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/srv/_RemoveLocations.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/manipulation_msgs/srv/__init__.py ...
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/__init__.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/msg
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/msg/_Object.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/msg/__init__.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/msg/_Grasp.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/msg/_Object.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/msg/_Location.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/msg/_Location.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/msg/_Grasp.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/msg/_PickBox.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/msg/_PickBox.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/msg/__init__.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/__init__.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/_AddRemoveObjects.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/_AddRemoveObjects.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/_RemoveLocations.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/_AddLocations.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/_ListOfObjects.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/_AddObjects.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/_AddObjects.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/_ListOfObjects.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/_RemoveLocations.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/__init__.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/_AddLocations.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/_AddBox.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/srv/_AddBox.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/manipulation_msgs/__init__.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/pkgconfig/manipulation_msgs.pc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/cmake/manipulation_msgs-msg-extras.cmake
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/cmake/manipulation_msgsConfig.cmake
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/cmake/manipulation_msgsConfig-version.cmake
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/manipulation_msgs/package.xml
+-- Up-to-date: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include
+-- Up-to-date: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/manipulation_msgs/visibility_control.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/libmanipulation_msgs_matlab.so
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m/
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/AddBoxRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/AddRemoveObjectsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/RemoveLocationsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/AddObjectsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/ListOfObjectsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/AddLocationsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/AddBoxResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/Location.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/RemoveLocationsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/PickBox.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/Object.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/Grasp.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/AddObjectsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/AddLocationsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/ListOfObjectsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+manipulation_msgs/AddRemoveObjectsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/pickBox.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/removeLocationsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/addObjectsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/removeLocationsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/addObjectsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/listOfObjectsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/addBoxResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/addRemoveObjectsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/addLocationsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/listOfObjectsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/location.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/addLocationsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/addBoxRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/object.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/addRemoveObjectsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+manipulation_msgs/grasp.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/pickplace_msgs/msg/Grasp.msg
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/pickplace_msgs/msg/Object.msg
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/pickplace_msgs/msg/PickBox.msg
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/pickplace_msgs/srv/AddRemoveObjects.srv
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/pickplace_msgs/srv/ListOfObjects.srv
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/pickplace_msgs/cmake/pickplace_msgs-msg-paths.cmake
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/pickplace_msgs
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/pickplace_msgs/ListOfObjectsRequest.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/pickplace_msgs/ListOfObjectsResponse.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/pickplace_msgs/AddRemoveObjectsResponse.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/pickplace_msgs/Grasp.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/pickplace_msgs/PickBox.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/pickplace_msgs/AddRemoveObjects.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/pickplace_msgs/Object.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/pickplace_msgs/AddRemoveObjectsRequest.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/pickplace_msgs/ListOfObjects.h
+Listing /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/pickplace_msgs ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/pickplace_msgs/__init__.py ...
+Listing /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/pickplace_msgs/msg ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/pickplace_msgs/msg/_Grasp.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/pickplace_msgs/msg/_Object.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/pickplace_msgs/msg/_PickBox.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/pickplace_msgs/msg/__init__.py ...
+Listing /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/pickplace_msgs/srv ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/pickplace_msgs/srv/_AddRemoveObjects.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/pickplace_msgs/srv/_ListOfObjects.py ...
+Compiling /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib/python2.7/dist-packages/pickplace_msgs/srv/__init__.py ...
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/__init__.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/msg
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/msg/_Object.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/msg/__init__.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/msg/_Grasp.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/msg/_Object.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/msg/_Grasp.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/msg/_PickBox.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/msg/_PickBox.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/msg/__init__.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/srv
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/srv/__init__.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/srv/_AddRemoveObjects.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/srv/_AddRemoveObjects.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/srv/_ListOfObjects.py
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/srv/_ListOfObjects.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/srv/__init__.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/python2.7/dist-packages/pickplace_msgs/__init__.pyc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/pkgconfig/pickplace_msgs.pc
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/pickplace_msgs/cmake/pickplace_msgs-msg-extras.cmake
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/pickplace_msgs/cmake/pickplace_msgsConfig.cmake
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/pickplace_msgs/cmake/pickplace_msgsConfig-version.cmake
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/share/pickplace_msgs/package.xml
+-- Up-to-date: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include
+-- Up-to-date: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/pickplace_msgs
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/include/pickplace_msgs/visibility_control.h
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/lib/libpickplace_msgs_matlab.so
+-- Up-to-date: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m/
+-- Up-to-date: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros
+-- Up-to-date: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+pickplace_msgs
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+pickplace_msgs/AddRemoveObjectsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+pickplace_msgs/ListOfObjectsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+pickplace_msgs/PickBox.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+pickplace_msgs/Object.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+pickplace_msgs/Grasp.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+pickplace_msgs/ListOfObjectsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+msggen/+pickplace_msgs/AddRemoveObjectsRequest.m
+-- Up-to-date: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal
+-- Up-to-date: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros
+-- Up-to-date: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+pickplace_msgs
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+pickplace_msgs/pickBox.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+pickplace_msgs/listOfObjectsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+pickplace_msgs/addRemoveObjectsResponse.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+pickplace_msgs/listOfObjectsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+pickplace_msgs/object.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+pickplace_msgs/addRemoveObjectsRequest.m
+-- Installing: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install/m//+ros/+internal/+ros/+custommessages/+pickplace_msgs/grasp.m
+Base path: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64
+Source space: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src
+Build space: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build
+Devel space: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel
+Install space: /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install
+Creating symlink "/home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src/CMakeLists.txt" pointing to "/usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1/share/catkin/cmake/toplevel.cmake"
+####
+#### Running command: "cmake /home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/src -DBoost_NAMESPACE=mwboost -DCATKIN_ENABLE_TESTING=off -DCMAKE_PREFIX_PATH=/usr/local/MATLAB/R2020b/sys/ros1/glnxa64/ros1;/usr/local/MATLAB/R2020b/toolbox/ros/mlroscpp/custom_messages -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_RELEASE=-O0 -DCATKIN_DEVEL_PREFIX=/home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel -DCMAKE_INSTALL_PREFIX=/home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/install -G Ninja" in "/home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build"
+####
+####
+#### Running command: "ninja install install -j8 -l8" in "/home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/build"
+####

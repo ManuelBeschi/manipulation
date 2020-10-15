@@ -326,7 +326,7 @@ namespace pickplace
     m_target_pub=m_nh.advertise<geometry_msgs::PoseStamped>("target",1);
     m_grasp_srv=m_nh.serviceClient<std_srvs::SetBool>("/gripper/grasp");
     m_detach_object_srv=m_nh.serviceClient<object_loader_msgs::detachObject>("detach_object_to_link");
-
+    m_reset_srv=m_nh.advertiseService("outbound/reset",&OutboundMosaic::resetCb,this);
     m_init=true;
 
     for (const std::string& group_name: m_group_names)
@@ -387,6 +387,7 @@ namespace pickplace
       ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
       action_res.result=manipulation_msgs::PlaceObjectsResult::SceneError;
       as->setAborted(action_res,"unable to get actual state");
+      m_slot_busy.at(place_id)=false;
       return;
     }
     group->setStartState(*group->getCurrentState());
@@ -459,6 +460,7 @@ namespace pickplace
       action_res.result=manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
       ROS_ERROR("error in plan for placing slot, code = %d",result.val);
       as->setAborted(action_res,"error in planning for placing");
+      m_slot_busy.at(place_id)=false;
       return;
     }
     ros::Time t_pick_plan=ros::Time::now();
@@ -472,6 +474,7 @@ namespace pickplace
       action_res.result=manipulation_msgs::PlaceObjectsResult::TrajectoryError;
       ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
       as->setAborted(action_res,"error in trajectory execution");
+      m_slot_busy.at(place_id)=false;
       return;
     }
     ros::Time t_approach_wait=ros::Time::now();
@@ -489,6 +492,7 @@ namespace pickplace
       action_res.result=manipulation_msgs::PlaceObjectsResult::TrajectoryError;
       ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
       as->setAborted(action_res,"error in trajectory execution");
+      m_slot_busy.at(place_id)=false;
       return;
     }
     ros::Time t_pick_wait=ros::Time::now();
@@ -515,6 +519,7 @@ namespace pickplace
       action_res.result=manipulation_msgs::PlaceObjectsResult::SceneError;
       ROS_ERROR("unable to detach object id %s",goal->object_id.c_str());
       as->setAborted(action_res,"unable to attach object");
+      m_slot_busy.at(place_id)=false;
       return;
     }
 
@@ -535,6 +540,7 @@ namespace pickplace
       ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
       action_res.result=manipulation_msgs::PlaceObjectsResult::SceneError;
       as->setAborted(action_res,"unable to get actual state");
+      m_slot_busy.at(place_id)=false;
       return;
     }
 
@@ -816,6 +822,18 @@ namespace pickplace
       ROS_ERROR("error executing %s/follow_joint_trajectory: %s",group_name.c_str(),result->error_string.c_str());
     }
     return;
+  }
+
+  bool OutboundMosaic::resetCb(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res)
+  {
+    if (req.data)
+    {
+
+      for (const std::pair<std::string,bool>& s: m_slot_busy)
+        m_slot_busy.at(s.first)=false;
+      ROS_INFO("Outbound mosaic reset");
+    }
+    return true;
   }
 
 

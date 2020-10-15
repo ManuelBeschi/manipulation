@@ -118,6 +118,8 @@ bool GoToLocation::init()
 void GoToLocation::gotoGoalCb(const manipulation_msgs::GoToGoalConstPtr& goal,
                               const std::string& group_name)
 {
+  ros::Time t_start=ros::Time::now();
+
   std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::GoToAction>> as=m_as.at(group_name);
 
   manipulation_msgs::GoToResult action_res;
@@ -170,6 +172,7 @@ void GoToLocation::gotoGoalCb(const manipulation_msgs::GoToGoalConstPtr& goal,
     location_jconf(iax)=configuration.at(iax);
   }
 
+  ros::Time t_planning_init=ros::Time::now();
   moveit::planning_interface::MoveGroupInterface::Plan approac_pick_plan=planToLocation(group_name,
                                                                                         place_id,
                                                                                         actual_jconf,
@@ -183,6 +186,9 @@ void GoToLocation::gotoGoalCb(const manipulation_msgs::GoToGoalConstPtr& goal,
     as->setAborted(action_res,"error in planning for placing");
     return;
   }
+  ros::Time t_planning=ros::Time::now();
+  action_res.planning_duration+=(t_planning-t_planning_init);
+  action_res.expected_execution_duration+=approac_pick_plan.trajectory_.joint_trajectory.points.back().time_from_start;
 
   execute(group_name,approac_pick_plan);
   if (!wait(group_name))
@@ -195,6 +201,7 @@ void GoToLocation::gotoGoalCb(const manipulation_msgs::GoToGoalConstPtr& goal,
 
   action_res.result=manipulation_msgs::GoToResult::Success;
   as->setSucceeded(action_res,"ok");
+  action_res.actual_duration+=(ros::Time::now()-t_start);
 
   return;
 

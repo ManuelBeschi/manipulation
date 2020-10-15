@@ -1,0 +1,8 @@
+prefix=/home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel
+
+Name: pickplace_msgs
+Description: Description of pickplace_msgs
+Version: 0.0.0
+Cflags: -I/home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/include
+Libs: -L/home/jacobi/projects/ros_ws/src/manipulation/matlab_msg_gen_ros1/glnxa64/devel/lib 
+Requires: message_runtime geometry_msgs roscpp

@@ -86,6 +86,7 @@ protected:
 
   ros::ServiceClient m_grasp_srv;
   ros::ServiceClient m_detach_object_srv;
+  ros::ServiceServer m_reset_srv;
   ros::Publisher m_target_pub;
   ros::NodeHandle m_nh;
   ros::NodeHandle m_pnh;
@@ -114,6 +115,8 @@ protected:
               const control_msgs::FollowJointTrajectoryResultConstPtr& result,
               const std::string& group_name);
 
+
+
 public:
   OutboundMosaic(const ros::NodeHandle& nh,
                  const ros::NodeHandle& pnh);
@@ -139,6 +142,7 @@ public:
 
 
 
+  bool resetCb(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
 
   friend std::ostream& operator<<  (std::ostream& os, const OutboundMosaic& pick_objs);
 

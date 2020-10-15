@@ -37,21 +37,34 @@ namespace pickplace {
 Location::Location(const std::string& name,
          const Eigen::Affine3d& T_w_location,
          const Eigen::Affine3d& T_w_approach,
-         const Eigen::Affine3d& T_w_leave,
-         const Status& status):
+         const Eigen::Affine3d& T_w_leave):
   m_name(name),
   m_T_w_location(T_w_location),
   m_T_w_approach(T_w_approach),
-  m_T_w_leave(T_w_leave),
-  m_status(status)
+  m_T_w_return(T_w_leave)
 {
 
+}
+
+
+Location::Location(const manipulation_msgs::Location &msg)
+{
+  tf::poseMsgToEigen(msg.pose,m_T_w_location);
+  Eigen::Affine3d T_location_approach;
+  tf::poseMsgToEigen(msg.approach_relative_pose,T_location_approach);
+  m_T_w_approach=m_T_w_location*T_location_approach;
+
+  Eigen::Affine3d T_location_return;
+  tf::poseMsgToEigen(msg.approach_relative_pose,T_location_return);
+  m_T_w_return=m_T_w_location*T_location_return;
+  m_name=msg.id;
 }
 
 bool Location::canBePickedBy(const std::string &group_name)
 {
   return ( m_location_configurations.find(group_name) != m_location_configurations.end() );
 }
+
 void Location::addLocationIk(const std::string &group_name, const std::vector<Eigen::VectorXd> &solutions)
 {
   if ( m_location_configurations.find(group_name) == m_location_configurations.end() )
@@ -66,22 +79,24 @@ void Location::addApproachIk(const std::string &group_name, const std::vector<Ei
   else
     m_approach_location_configurations.at(group_name)=solutions;
 }
-void Location::addLeaveIk(const std::string &group_name, const std::vector<Eigen::VectorXd> &solutions)
+void Location::addReturnIk(const std::string &group_name, const std::vector<Eigen::VectorXd> &solutions)
 {
-  if ( m_leave_location_configurations.find(group_name) == m_leave_location_configurations.end() )
-    m_leave_location_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(group_name, solutions));
+  if ( m_return_location_configurations.find(group_name) == m_return_location_configurations.end() )
+    m_return_location_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(group_name, solutions));
   else
-    m_leave_location_configurations.at(group_name)=solutions;
+    m_return_location_configurations.at(group_name)=solutions;
 }
 
 LocationManager::LocationManager(const std::map<std::string, std::shared_ptr<planning_scene::PlanningScene> > &planning_scene,
                                  const std::map<std::string, moveit::planning_interface::MoveGroupInterfacePtr> &groups,
-                                 const std::map<std::string, moveit::core::JointModelGroup *> &joint_models):
+                                 const std::map<std::string, moveit::core::JointModelGroup *> &joint_models, const ros::NodeHandle& nh):
   m_planning_scene(planning_scene),
   m_groups(groups),
-  m_joint_models(joint_models)
+  m_joint_models(joint_models),
+  m_nh(nh)
 {
-
+  m_add_loc_srv=m_nh.advertiseService("add",&LocationManager::addLocationsCb,this);
+  m_remove_loc_srv=m_nh.advertiseService("remove",&LocationManager::removeLocationsCb,this);
 }
 
 bool LocationManager::addLocation(LocationPtr &location)
@@ -141,12 +156,12 @@ bool LocationManager::addLocation(LocationPtr &location)
     }
     location->addApproachIk(group.first,sols);
 
-    if (!ik(group.first,location->m_T_w_leave,sols))
+    if (!ik(group.first,location->m_T_w_return,sols))
     {
       ROS_INFO("Location %s cannot be reached by group %s",location->m_name.c_str(),group.first.c_str());
       continue;
     }
-    location->addLeaveIk(group.first,sols);
+    location->addReturnIk(group.first,sols);
 
     added=true;
   }
@@ -233,19 +248,26 @@ bool LocationManager::ik(const std::string& group_name,
   return found;
 }
 
-bool LocationManager::setLocationStatus(const std::string& location_name, const Location::Status& status)
-{
-  if ( m_locations.find(location_name) == m_locations.end() )
-  {
-    ROS_ERROR("Location %s is not present",location_name.c_str());
-    return false;
-  }
-  m_locations.at(location_name)->m_status=status;
-  return true;
-}
+//bool LocationManager::setLocationStatus(const std::string& location_name, const Location::Status& status)
+//{
+//  if ( m_locations.find(location_name) == m_locations.end() )
+//  {
+//    ROS_ERROR("Location %s is not present",location_name.c_str());
+//    return false;
+//  }
+//  m_locations.at(location_name)->m_status=status;
+//  return true;
+//}
 
 bool LocationManager::removeLocation(const std::string& location_name)
 {
+  if (location_name.compare("delete_all")==0)
+  {
+    ROS_INFO("delete_all shortcut: delete all the locations in %s",m_nh.getNamespace().c_str());
+    m_locations.clear();
+    return true;
+  }
+
   if ( m_locations.find(location_name) == m_locations.end() )
   {
     ROS_ERROR("Location %s is not present",location_name.c_str());
@@ -290,7 +312,7 @@ moveit::planning_interface::MoveGroupInterface::Plan LocationManager::planTo(con
       sols=m_locations.at(location_name)->getLocationIk(group_name);
       break;
     case Location::Leave:
-      sols=m_locations.at(location_name)->getLeaveIk(group_name);
+      sols=m_locations.at(location_name)->getReturnIk(group_name);
       break;
   }
 
@@ -322,6 +344,27 @@ moveit::planning_interface::MoveGroupInterface::Plan LocationManager::planTo(con
   result= res.error_code_;
 
   return plan;
+}
+
+bool LocationManager::addLocationsCb(manipulation_msgs::AddLocations::Request &req, manipulation_msgs::AddLocations::Response &res)
+{
+  for (const manipulation_msgs::Location& loc_msg: req.locations)
+  {
+    LocationPtr loc=std::make_shared<Location>(loc_msg);
+    if (!addLocation(loc))
+      return false;
+  }
+  return true;
+}
+
+bool LocationManager::removeLocationsCb(manipulation_msgs::RemoveLocations::Request &req, manipulation_msgs::RemoveLocations::Request &res)
+{
+  for (const std::string& name: req.location_names)
+  {
+    if (!removeLocation(name))
+      return false;
+  }
+  return true;
 }
 
 
