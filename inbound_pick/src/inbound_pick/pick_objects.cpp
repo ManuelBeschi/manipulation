@@ -283,12 +283,14 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
 void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConstPtr &goal,
                                    const std::string& group_name)
 {
+  manipulation_msgs::PickObjectsResult action_res;
+  std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> as=m_pick_servers.at(group_name);
+  try
+  {
   ros::Time t_start=ros::Time::now();
 
-  manipulation_msgs::PickObjectsResult action_res;
   std::vector<std::string> type_names=goal->object_types;
   std::map<std::string,pickplace::InboundBoxPtr> possible_boxes=searchBoxWithTypes(type_names);
-  std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> as=m_pick_servers.at(group_name);
   std::string tool_name=m_tool_names.at(group_name);
 
   ROS_PROTO("find %zu boxes",possible_boxes.size());
@@ -475,7 +477,14 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
   action_res.actual_duration+=(ros::Time::now()-t_start);
   as->setSucceeded(action_res,"ok");
   return;
-
+  }
+  catch( std::exception& ex)
+  {
+    ROS_ERROR("exception: %s",ex.what());
+    action_res.result=manipulation_msgs::PickObjectsResult::UnexpectedError;
+    as->setAborted(action_res,"exeception");
+    return;
+  }
 }
 
 bool PickObjects::createInboundBox(const std::string& box_name, const Eigen::Affine3d& T_w_box, const double heigth)

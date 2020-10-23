@@ -556,7 +556,7 @@ namespace pickplace
 
     if (!result)
     {
-      action_res.result=manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
+      action_res.result=manipulation_msgs::PlaceObjectsResult::ReturnError;
       ROS_ERROR("error in plan black to box, code = %d",result.val);
       as->setAborted(action_res,"error in planning back to box");
       return;
@@ -572,7 +572,7 @@ namespace pickplace
 
     if (!wait(group_name))
     {
-      action_res.result=manipulation_msgs::PlaceObjectsResult::TrajectoryError;
+      action_res.result=manipulation_msgs::PlaceObjectsResult::ReturnError;
       ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
       as->setAborted(action_res,"error in trajectory execution");
       return;

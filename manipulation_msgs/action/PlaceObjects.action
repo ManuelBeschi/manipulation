@@ -3,13 +3,15 @@ string object_id
 string place_id
 ---
 int8 result
+int8 Success=0
 int8 NotInitialized=-1
 int8 Full=-2
 int8 ReleaseError=-3
 int8 SceneError=-4
 int8 NoAvailableTrajectories=-5
 int8 TrajectoryError=-6
-int8 Success=0
+int8 ReturnError=-7
+int8 UnexpectedError=-99
 
 duration expected_execution_duration
 duration actual_duration
