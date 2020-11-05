@@ -269,12 +269,16 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
   }
 
   ROS_INFO("Plan approach for group %s",group_name.c_str());
+  m_mtx.lock();
   if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
   {
     ROS_ERROR("Could not compute plan successfully");
     result= res.error_code_;
+    m_mtx.unlock();
     return plan;
   }
+  m_mtx.unlock();
+
   plan.planning_time_=res.planning_time_;
 
   res.trajectory_->getRobotTrajectoryMsg(plan.trajectory_);
@@ -829,14 +833,16 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
 
   ROS_PROTO("number of possible goals = %zu",req.goal_constraints.size());
 
+  m_mtx.lock();
   if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
   {
     ROS_ERROR("Could not compute plan successfully");
-
+    m_mtx.unlock();
     result=moveit::planning_interface::MoveItErrorCode::FAILURE;
     return plan;
 
   }
+  m_mtx.unlock();
   plan.planning_time_=res.planning_time_;
   ROS_PROTO("solved");
 
@@ -943,12 +949,15 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
 
   }
 
+  m_mtx.lock();
   if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
   {
     ROS_ERROR("Could not compute plan successfully");
     result= res.error_code_;
+    m_mtx.unlock();
     return plan;
   }
+  m_mtx.unlock();
   plan.planning_time_=res.planning_time_;
 
   res.trajectory_->getRobotTrajectoryMsg(plan.trajectory_);
