@@ -327,6 +327,7 @@ namespace pickplace
     m_grasp_srv=m_nh.serviceClient<std_srvs::SetBool>("/gripper/grasp");
     m_detach_object_srv=m_nh.serviceClient<object_loader_msgs::detachObject>("detach_object_to_link");
     m_reset_srv=m_nh.advertiseService("outbound/reset",&OutboundMosaic::resetCb,this);
+    ROS_WARN("====================================================== RESET ==================================");
     m_init=true;
 
     for (const std::string& group_name: m_group_names)

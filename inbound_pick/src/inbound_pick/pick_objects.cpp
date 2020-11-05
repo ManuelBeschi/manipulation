@@ -101,8 +101,8 @@ bool PickObjects::init()
 
     std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> as;
     as.reset(new actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>(m_nh,group_name+"/pick",
-                                                                                    boost::bind(&PickObjects::pickObjectGoalCb,this,_1,group_name),
-                                                                                    false));
+                                                                                     boost::bind(&PickObjects::pickObjectGoalCb,this,_1,group_name),
+                                                                                     false));
     m_pick_servers.insert(std::pair<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>>>(group_name,as));
 
     std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>> fjt_ac;
@@ -221,21 +221,21 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
 
 
   std::vector<Eigen::VectorXd> sols=selected_grasp_pose->getApproachConfiguration();
-//  for (const GraspPosePtr& grasp_pose: selected_object->getGraspPoses(group_name))
-//  {
-//    if (!grasp_pose->getToolName().compare(tool_name))
-//    {
-//      goal_state.setJointGroupPositions(jmg, grasp_pose->getConfiguration());
-//      goal_state.updateCollisionBodyTransforms();
-//      if (!m_planning_scene.at(group_name)->isStateValid(goal_state))
-//        continue;
-//      moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
-//      req.goal_constraints.push_back(joint_goal);
-//      if (ik_goal++>=max_ik_goal_number)
-//        break;
+  //  for (const GraspPosePtr& grasp_pose: selected_object->getGraspPoses(group_name))
+  //  {
+  //    if (!grasp_pose->getToolName().compare(tool_name))
+  //    {
+  //      goal_state.setJointGroupPositions(jmg, grasp_pose->getConfiguration());
+  //      goal_state.updateCollisionBodyTransforms();
+  //      if (!m_planning_scene.at(group_name)->isStateValid(goal_state))
+  //        continue;
+  //      moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
+  //      req.goal_constraints.push_back(joint_goal);
+  //      if (ik_goal++>=max_ik_goal_number)
+  //        break;
 
-//    }
-//  }
+  //    }
+  //  }
 
   if (!ik(group_name,approach_pose,sols))
   {
@@ -287,196 +287,202 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
   std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> as=m_pick_servers.at(group_name);
   try
   {
-  ros::Time t_start=ros::Time::now();
+    ros::Time t_start=ros::Time::now();
 
-  std::vector<std::string> type_names=goal->object_types;
-  std::map<std::string,pickplace::InboundBoxPtr> possible_boxes=searchBoxWithTypes(type_names);
-  std::string tool_name=m_tool_names.at(group_name);
+    std::vector<std::string> type_names=goal->object_types;
+    m_mtx.lock();
+    std::map<std::string,pickplace::InboundBoxPtr> possible_boxes=searchBoxWithTypes(type_names);
+    m_mtx.unlock();
+    std::string tool_name=m_tool_names.at(group_name);
 
-  ROS_PROTO("find %zu boxes",possible_boxes.size());
-  if (possible_boxes.size()==0)
-  {
-    action_res.result=manipulation_msgs::PickObjectsResult::NoInboundBoxFound;
-    ROS_ERROR("No objects found");
-    as->setAborted(action_res,"no objects found");
-    return;
-  }
-
-
-  moveit::planning_interface::MoveItErrorCode result;
-  pickplace::InboundBoxPtr selected_box;
-  Eigen::VectorXd approach_jconf;
-
-  ros::Time t_planning_init=ros::Time::now();
-
-  moveit::planning_interface::MoveGroupInterface::Plan plan=planToBestBox(group_name,
-                                                                          possible_boxes,
-                                                                          result,
-                                                                          selected_box,
-                                                                          approach_jconf);
+    ROS_PROTO("find %zu boxes",possible_boxes.size());
+    if (possible_boxes.size()==0)
+    {
+      action_res.result=manipulation_msgs::PickObjectsResult::NoInboundBoxFound;
+      ROS_ERROR("No objects found");
+      as->setAborted(action_res,"no objects found");
+      return;
+    }
 
 
+    moveit::planning_interface::MoveItErrorCode result;
+    pickplace::InboundBoxPtr selected_box;
+    Eigen::VectorXd approach_jconf;
 
-  if (!result)
-  {
-    action_res.result=manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
-    ROS_ERROR("error in plan to best box, code = %d",result.val);
-    as->setAborted(action_res,"error in planning to box");
-    return;
-  }
-  ROS_PROTO("plan to approach in %f second",plan.planning_time_);
-  ros::Time t_planning=ros::Time::now();
-  action_res.planning_duration+=(t_planning-t_planning_init);
-  action_res.expected_execution_duration+=plan.trajectory_.joint_trajectory.points.back().time_from_start;
+    ros::Time t_planning_init=ros::Time::now();
 
-  geometry_msgs::PoseStamped target;
-  target.header.frame_id=world_frame;
-  target.header.stamp=ros::Time::now();
-  tf::poseEigenToMsg(selected_box->getApproachPose(),target.pose);
-  m_target_pub.publish(target);
-  execute(group_name,
-          plan);
+    moveit::planning_interface::MoveGroupInterface::Plan plan=planToBestBox(group_name,
+                                                                            possible_boxes,
+                                                                            result,
+                                                                            selected_box,
+                                                                            approach_jconf);
 
-  pickplace::ObjectPtr selected_object;
-  pickplace::GraspPosePtr selected_grasp_pose;
 
-  t_planning_init=ros::Time::now();
-  selected_box->getMutex().lock();
-  moveit::planning_interface::MoveGroupInterface::Plan pick_plan=planToObject(group_name,
-                                                                              type_names,
-                                                                              selected_box,
-                                                                              approach_jconf,
-                                                                              tool_name,
-                                                                              result,
-                                                                              selected_object,
-                                                                              selected_grasp_pose
-                                                                              );
 
-  if (!result)
-  {
-    action_res.result=manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
-    ROS_ERROR("error in plan to best object in the box, code = %d",result.val);
-    as->setAborted(action_res,"error in planning to object");
+    if (!result)
+    {
+      action_res.result=manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
+      ROS_ERROR("error in plan to best box, code = %d",result.val);
+      as->setAborted(action_res,"error in planning to box");
+      return;
+    }
+    ROS_PROTO("plan to approach in %f second",plan.planning_time_);
+    ros::Time t_planning=ros::Time::now();
+    action_res.planning_duration+=(t_planning-t_planning_init);
+    action_res.expected_execution_duration+=plan.trajectory_.joint_trajectory.points.back().time_from_start;
+
+    geometry_msgs::PoseStamped target;
+    target.header.frame_id=world_frame;
+    target.header.stamp=ros::Time::now();
+    tf::poseEigenToMsg(selected_box->getApproachPose(),target.pose);
+    m_target_pub.publish(target);
+    execute(group_name,
+            plan);
+
+    pickplace::ObjectPtr selected_object;
+    pickplace::GraspPosePtr selected_grasp_pose;
+
+    t_planning_init=ros::Time::now();
+    selected_box->getMutex().lock();
+    moveit::planning_interface::MoveGroupInterface::Plan pick_plan=planToObject(group_name,
+                                                                                type_names,
+                                                                                selected_box,
+                                                                                approach_jconf,
+                                                                                tool_name,
+                                                                                result,
+                                                                                selected_object,
+                                                                                selected_grasp_pose
+                                                                                );
+
+    if (!result)
+    {
+      action_res.result=manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
+      ROS_ERROR("error in plan to best object in the box, code = %d",result.val);
+      as->setAborted(action_res,"error in planning to object");
+      selected_box->getMutex().unlock();
+      return;
+    }
+    t_planning=ros::Time::now();
+    action_res.planning_duration+=(t_planning-t_planning_init);
+    action_res.expected_execution_duration+=pick_plan.trajectory_.joint_trajectory.points.back().time_from_start;
+
+    if (!selected_box->removeObject(selected_object->getId()))
+    {
+      ROS_WARN("unable to remove object");
+    }
     selected_box->getMutex().unlock();
+
+    if (!wait(group_name))
+    {
+      action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
+      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+      as->setAborted(action_res,"error in trajectory execution");
+      // readd object to box
+      selected_box->addObject(selected_object);
+      return;
+    }
+
+    tf::poseEigenToMsg(selected_grasp_pose->getPose(),target.pose);
+    m_target_pub.publish(target);
+    execute(group_name,
+            pick_plan);
+
+    if (!wait(group_name))
+    {
+      action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
+      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+      as->setAborted(action_res,"error in trajectory execution");
+      // readd object to box
+      selected_box->addObject(selected_object);
+      return;
+    }
+
+    ros::Time t_grasp_init=ros::Time::now();
+    ros::Duration(0.5).sleep();
+
+    object_loader_msgs::attachObject attach_srv;
+    attach_srv.request.obj_id=selected_object->getId();
+    attach_srv.request.link_name=selected_grasp_pose->getToolName();;
+    if (!m_attach_obj_.call(attach_srv))
+    {
+      action_res.result=manipulation_msgs::PickObjectsResult::NoObjectsFound;
+      ROS_ERROR("unaspected error calling %s service",m_attach_obj_.getService().c_str());
+      as->setAborted(action_res,"unaspected error calling attach server");
+      return;
+    }
+    if (!attach_srv.response.success)
+    {
+      action_res.result=manipulation_msgs::PickObjectsResult::NoObjectsFound;
+      ROS_ERROR("unable to attach object");
+      as->setAborted(action_res,"unable to attach object");
+      return;
+    }
+
+    ROS_PROTO("attached collision object %s to tool %s",attach_srv.request.obj_id.c_str(),attach_srv.request.link_name.c_str());
+
+    std_srvs::SetBool grasp_req;
+    grasp_req.request.data=1;
+    m_grasp_srv.call(grasp_req);
+    ros::Duration(1).sleep();
+
+    action_res.grasping_object_duration=(ros::Time::now()-t_grasp_init);
+
+    Eigen::Affine3d T_w_approach=selected_grasp_pose->getPose();
+    T_w_approach.translation()(2)+=selected_box->getHeight();
+
+    t_planning_init=ros::Time::now();
+    ROS_PROTO("planning to approach");
+    moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(group_name,
+                                                                                        selected_grasp_pose->getConfiguration(),
+                                                                                        T_w_approach,
+                                                                                        selected_object,
+                                                                                        selected_grasp_pose,
+                                                                                        result,
+                                                                                        approach_jconf);
+
+
+    if (!result)
+    {
+      action_res.result=manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
+      ROS_ERROR("error in plan black to box, code = %d",result.val);
+      as->setAborted(action_res,"error in planning back to box");
+      return;
+    }
+    t_planning=ros::Time::now();
+    action_res.planning_duration+=(t_planning-t_planning_init);
+    action_res.expected_execution_duration+=return_plan.trajectory_.joint_trajectory.points.back().time_from_start;
+
+
+    ROS_PROTO("waiting to execute trj");
+    if (!wait(group_name))
+    {
+      action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
+      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+      as->setAborted(action_res,"error in trajectory execution");
+      return;
+    }
+    tf::poseEigenToMsg(T_w_approach,target.pose);
+    m_target_pub.publish(target);
+    ROS_PROTO("execute trj");
+    execute(group_name,
+            return_plan);
+
+
+    ROS_PROTO("waiting to execute trj");
+    if (!wait(group_name))
+    {
+      action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
+      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+      as->setAborted(action_res,"error in trajectory execution");
+      return;
+    }
+    action_res.object_type=selected_object->getType();
+    action_res.object_id=selected_object->getId();
+    action_res.result=manipulation_msgs::PickObjectsResult::Success;
+
+    action_res.actual_duration+=(ros::Time::now()-t_start);
+    as->setSucceeded(action_res,"ok");
     return;
-  }
-  t_planning=ros::Time::now();
-  action_res.planning_duration+=(t_planning-t_planning_init);
-  action_res.expected_execution_duration+=pick_plan.trajectory_.joint_trajectory.points.back().time_from_start;
-
-  if (!selected_box->removeObject(selected_object->getId()))
-  {
-    ROS_WARN("unable to remove object");
-  }
-  selected_box->getMutex().unlock();
-
-  if (!wait(group_name))
-  {
-    action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
-    ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
-    as->setAborted(action_res,"error in trajectory execution");
-    // readd object to box
-    selected_box->addObject(selected_object);
-    return;
-  }
-
-  tf::poseEigenToMsg(selected_grasp_pose->getPose(),target.pose);
-  m_target_pub.publish(target);
-  execute(group_name,
-          pick_plan);
-
-  if (!wait(group_name))
-  {
-    action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
-    ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
-    as->setAborted(action_res,"error in trajectory execution");
-    // readd object to box
-    selected_box->addObject(selected_object);
-    return;
-  }
-
-  ros::Time t_grasp_init=ros::Time::now();
-  ros::Duration(0.5).sleep();
-
-  object_loader_msgs::attachObject attach_srv;
-  attach_srv.request.obj_id=selected_object->getId();
-  attach_srv.request.link_name=selected_grasp_pose->getToolName();;
-  if (!m_attach_obj_.call(attach_srv))
-  {
-    action_res.result=manipulation_msgs::PickObjectsResult::NoObjectsFound;
-    ROS_ERROR("unaspected error calling %s service",m_attach_obj_.getService().c_str());
-    as->setAborted(action_res,"unaspected error calling attach server");
-    return;
-  }
-  if (!attach_srv.response.success)
-  {
-    action_res.result=manipulation_msgs::PickObjectsResult::NoObjectsFound;
-    ROS_ERROR("unable to attach object");
-    as->setAborted(action_res,"unable to attach object");
-    return;
-  }
-
-  ROS_PROTO("attached collision object %s to tool %s",attach_srv.request.obj_id.c_str(),attach_srv.request.link_name.c_str());
-
-  std_srvs::SetBool grasp_req;
-  grasp_req.request.data=1;
-  m_grasp_srv.call(grasp_req);
-  ros::Duration(1).sleep();
-
-  action_res.grasping_object_duration=(ros::Time::now()-t_grasp_init);
-
-  Eigen::Affine3d T_w_approach=selected_grasp_pose->getPose();
-  T_w_approach.translation()(2)+=selected_box->getHeight();
-
-  t_planning_init=ros::Time::now();
-  moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(group_name,
-                                                                                      selected_grasp_pose->getConfiguration(),
-                                                                                      T_w_approach,
-                                                                                      selected_object,
-                                                                                      selected_grasp_pose,
-                                                                                      result,
-                                                                                      approach_jconf);
-
-
-  if (!result)
-  {
-    action_res.result=manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
-    ROS_ERROR("error in plan black to box, code = %d",result.val);
-    as->setAborted(action_res,"error in planning back to box");
-    return;
-  }
-  t_planning=ros::Time::now();
-  action_res.planning_duration+=(t_planning-t_planning_init);
-  action_res.expected_execution_duration+=return_plan.trajectory_.joint_trajectory.points.back().time_from_start;
-
-
-  if (!wait(group_name))
-  {
-    action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
-    ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
-    as->setAborted(action_res,"error in trajectory execution");
-    return;
-  }
-  tf::poseEigenToMsg(T_w_approach,target.pose);
-  m_target_pub.publish(target);
-  execute(group_name,
-          return_plan);
-
-
-  if (!wait(group_name))
-  {
-    action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
-    ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
-    as->setAborted(action_res,"error in trajectory execution");
-    return;
-  }
-  action_res.object_type=selected_object->getType();
-  action_res.object_id=selected_object->getId();
-  action_res.result=manipulation_msgs::PickObjectsResult::Success;
-
-  action_res.actual_duration+=(ros::Time::now()-t_start);
-  as->setSucceeded(action_res,"ok");
-  return;
   }
   catch( std::exception& ex)
   {
