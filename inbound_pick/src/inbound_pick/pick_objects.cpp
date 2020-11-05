@@ -244,13 +244,16 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
     return plan;
   }
 
+  m_mtx.lock();
+  planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+  m_mtx.unlock();
   for (const Eigen::VectorXd& goal: sols)
   {
     if (req.goal_constraints.size()>=max_ik_goal_number)
       break;
     goal_state.setJointGroupPositions(jmg, goal);
     goal_state.updateCollisionBodyTransforms();
-    if (!m_planning_scene.at(group_name)->isStateValid(goal_state))
+    if (!planning_scene->isStateValid(goal_state))
       continue;
     moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
     req.goal_constraints.push_back(joint_goal);
@@ -264,7 +267,9 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
     return plan;
 
   }
-  if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene.at(group_name), req, res))
+
+  ROS_INFO("Plan approach for group %s",group_name.c_str());
+  if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
   {
     ROS_ERROR("Could not compute plan successfully");
     result= res.error_code_;
@@ -671,6 +676,9 @@ bool PickObjects::ik(const std::string& group_name, Eigen::Affine3d T_w_a, std::
   moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
   moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
   robot_state::RobotState state = *group->getCurrentState();
+  m_mtx.lock();
+  planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+  m_mtx.unlock();
 
   Eigen::VectorXd preferred_configuration(jmg->getActiveJointModels().size());
   Eigen::VectorXd preferred_configuration_weight(jmg->getActiveJointModels().size(),1);
@@ -713,7 +721,7 @@ bool PickObjects::ik(const std::string& group_name, Eigen::Affine3d T_w_a, std::
       if (!state.satisfiesBounds())
         continue;
       state.updateCollisionBodyTransforms();
-      if (!m_planning_scene.at(group_name)->isStateValid(state))
+      if (!planning_scene->isStateValid(state))
         continue;
       Eigen::VectorXd js;
       state.copyJointGroupPositions(group_name,js);
@@ -790,6 +798,10 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
 
   robot_state::RobotState goal_state(m_kinematic_model);
 
+  m_mtx.lock();
+  planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+  m_mtx.unlock();
+
   for (const std::pair<std::string,InboundBoxPtr>& box: possible_boxes)
   {
     std::vector<Eigen::VectorXd> box_goals=box.second->getConfigurations(group_name);
@@ -801,7 +813,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
         break;
       goal_state.setJointGroupPositions(jmg, goal);
       goal_state.updateCollisionBodyTransforms();
-      if (!m_planning_scene.at(group_name)->isStateValid(goal_state))
+      if (!planning_scene->isStateValid(goal_state))
         continue;
       moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
       req.goal_constraints.push_back(joint_goal);
@@ -817,7 +829,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
 
   ROS_PROTO("number of possible goals = %zu",req.goal_constraints.size());
 
-  if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene.at(group_name), req, res))
+  if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
   {
     ROS_ERROR("Could not compute plan successfully");
 
@@ -900,6 +912,10 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
   req.allowed_planning_time=5;
   robot_state::RobotState goal_state(m_kinematic_model);
 
+  m_mtx.lock();
+  planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+  m_mtx.unlock();
+
   for (const ObjectPtr& obj: objects)
   {
     int ik_goal=0;
@@ -909,7 +925,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
       {
         goal_state.setJointGroupPositions(jmg, grasp_pose->getConfiguration());
         goal_state.updateCollisionBodyTransforms();
-        if (!m_planning_scene.at(group_name)->isStateValid(goal_state))
+        if (!planning_scene->isStateValid(goal_state))
           continue;
         moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
         req.goal_constraints.push_back(joint_goal);
@@ -927,7 +943,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
 
   }
 
-  if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene.at(group_name), req, res))
+  if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
   {
     ROS_ERROR("Could not compute plan successfully");
     result= res.error_code_;
