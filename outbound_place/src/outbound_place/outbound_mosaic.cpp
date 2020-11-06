@@ -804,6 +804,8 @@ namespace pickplace
   bool OutboundMosaic::wait(const std::string& group_name)
   {
     ros::Time t0=ros::Time::now();
+    m_fjt_clients.at(group_name)->waitForResult();
+
     while (std::isnan(m_fjt_result.at(group_name)))
     {
       ros::Duration(0.01).sleep();

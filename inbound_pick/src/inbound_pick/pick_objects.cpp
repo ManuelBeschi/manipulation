@@ -354,14 +354,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     execute(group_name,
             plan);
 
-//    if (!wait(group_name))
-//    {
-//      action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
-//      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
-//      as->setAborted(action_res,"error in trajectory execution");
-//      // readd object to box
-//      return;
-//    }
+
 
     pickplace::ObjectPtr selected_object;
     pickplace::GraspPosePtr selected_grasp_pose;
@@ -396,7 +389,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     }
     selected_box->getMutex().unlock();
 
-// POSSIBILE FONTE DEL FAULT?
+    m_fjt_clients.at(group_name)->waitForResult();
     if (!wait(group_name))
     {
       action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
@@ -412,6 +405,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     execute(group_name,
             pick_plan);
 
+    m_fjt_clients.at(group_name)->waitForResult();
     if (!wait(group_name))
     {
       action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
@@ -494,6 +488,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
 
 
     ROS_PROTO("waiting to execute trj");
+    m_fjt_clients.at(group_name)->waitForResult();
     if (!wait(group_name))
     {
       action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
@@ -1028,11 +1023,11 @@ bool PickObjects::execute(const std::string& group_name, const moveit::planning_
   control_msgs::FollowJointTrajectoryGoal goal;
   goal.trajectory=plan.trajectory_.joint_trajectory;
 
+  m_fjt_result.at(group_name)=std::nan("1");;
   auto cb=boost::bind(&pickplace::PickObjects::doneCb,this,_1,_2,group_name);
   m_fjt_clients.at(group_name)->sendGoal(goal,
                                          cb);
 
-  m_fjt_result.at(group_name)=std::nan("1");;
 
   return true;
 }
