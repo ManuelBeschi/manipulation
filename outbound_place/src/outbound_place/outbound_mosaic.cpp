@@ -601,9 +601,11 @@ namespace pickplace
     state.copyJointGroupPositions(group_name,actual_configuration);
     unsigned int n_seed=sols.size();
     bool found=false;
+    planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
 
     for (unsigned int iter=0;iter<N_MAX_ITER;iter++)
     {
+      ROS_FATAL_COND(iter%100==0,"iter=%u, solutions.size()=%zu",iter,solutions.size());
       if (solutions.size()>=3*N_ITER)
         break;
       if (iter<n_seed)
@@ -624,7 +626,7 @@ namespace pickplace
         if (!state.satisfiesBounds())
           continue;
         state.updateCollisionBodyTransforms();
-        if (!m_planning_scene.at(group_name)->isStateValid(state))
+        if (!planning_scene->isStateValid(state))
           continue;
         Eigen::VectorXd js;
         state.copyJointGroupPositions(group_name,js);
@@ -707,7 +709,9 @@ namespace pickplace
     }
     ROS_PROTO("Found %zu solution",sols.size());
 
-    if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene.at(group_name), req, res))
+    planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+
+    if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
     {
       ROS_ERROR("Could not compute plan successfully");
       result= res.error_code_;
@@ -760,7 +764,8 @@ namespace pickplace
     }
     ROS_PROTO("Found %zu solution",sols.size());
 
-    if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene.at(group_name), req, res))
+    planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+    if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
     {
       ROS_ERROR("Could not compute plan successfully");
       result= res.error_code_;

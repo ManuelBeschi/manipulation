@@ -253,8 +253,13 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
       break;
     goal_state.setJointGroupPositions(jmg, goal);
     goal_state.updateCollisionBodyTransforms();
+    m_mtx.lock();
     if (!planning_scene->isStateValid(goal_state))
+    {
+      m_mtx.unlock();
       continue;
+    }
+    m_mtx.unlock();
     moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
     req.goal_constraints.push_back(joint_goal);
 
@@ -292,6 +297,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
 void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConstPtr &goal,
                                    const std::string& group_name)
 {
+
   manipulation_msgs::PickObjectsResult action_res;
   std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> as=m_pick_servers.at(group_name);
   try
@@ -335,7 +341,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
       as->setAborted(action_res,"error in planning to box");
       return;
     }
-    ROS_PROTO("plan to approach in %f second",plan.planning_time_);
+    ROS_PROTO("Group=%s: plan to approach in %f second",group_name.c_str(),plan.planning_time_);
     ros::Time t_planning=ros::Time::now();
     action_res.planning_duration+=(t_planning-t_planning_init);
     action_res.expected_execution_duration+=plan.trajectory_.joint_trajectory.points.back().time_from_start;
@@ -347,6 +353,15 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     m_target_pub.publish(target);
     execute(group_name,
             plan);
+
+//    if (!wait(group_name))
+//    {
+//      action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
+//      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+//      as->setAborted(action_res,"error in trajectory execution");
+//      // readd object to box
+//      return;
+//    }
 
     pickplace::ObjectPtr selected_object;
     pickplace::GraspPosePtr selected_grasp_pose;
@@ -366,7 +381,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     if (!result)
     {
       action_res.result=manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
-      ROS_ERROR("error in plan to best object in the box, code = %d",result.val);
+      ROS_ERROR("Group=%s: error in plan to best object in the box, code = %d",group_name.c_str(),result.val);
       as->setAborted(action_res,"error in planning to object");
       selected_box->getMutex().unlock();
       return;
@@ -381,6 +396,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     }
     selected_box->getMutex().unlock();
 
+// POSSIBILE FONTE DEL FAULT?
     if (!wait(group_name))
     {
       action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
@@ -427,7 +443,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
       return;
     }
 
-    ROS_PROTO("attached collision object %s to tool %s",attach_srv.request.obj_id.c_str(),attach_srv.request.link_name.c_str());
+    ROS_PROTO("Group=%s: attached collision object %s to tool %s",group_name.c_str(),attach_srv.request.obj_id.c_str(),attach_srv.request.link_name.c_str());
 
     std_srvs::SetBool grasp_req;
     grasp_req.request.data=1;
@@ -440,7 +456,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     T_w_approach.translation()(2)+=selected_box->getHeight();
 
     t_planning_init=ros::Time::now();
-    ROS_PROTO("planning to approach");
+    ROS_PROTO("planning to approach. Group=%s",group_name.c_str());
     moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(group_name,
                                                                                         selected_grasp_pose->getConfiguration(),
                                                                                         T_w_approach,
@@ -462,14 +478,14 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     action_res.expected_execution_duration+=return_plan.trajectory_.joint_trajectory.points.back().time_from_start;
 
 
-    ROS_PROTO("waiting to execute trj");
-    if (!wait(group_name))
-    {
-      action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
-      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
-      as->setAborted(action_res,"error in trajectory execution");
-      return;
-    }
+//    ROS_PROTO("waiting to execute trj");
+//    if (!wait(group_name))
+//    {
+//      action_res.result=manipulation_msgs::PickObjectsResult::TrajectoryError;
+//      ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
+//      as->setAborted(action_res,"error in trajectory execution");
+//      return;
+//    }
     tf::poseEigenToMsg(T_w_approach,target.pose);
     m_target_pub.publish(target);
     ROS_PROTO("execute trj");
@@ -725,8 +741,14 @@ bool PickObjects::ik(const std::string& group_name, Eigen::Affine3d T_w_a, std::
       if (!state.satisfiesBounds())
         continue;
       state.updateCollisionBodyTransforms();
+      m_mtx.lock();
       if (!planning_scene->isStateValid(state))
+      {
+        m_mtx.unlock();
         continue;
+      }
+      m_mtx.unlock();
+
       Eigen::VectorXd js;
       state.copyJointGroupPositions(group_name,js);
       double dist=(preferred_configuration_weight.cwiseProduct(js-preferred_configuration)).norm();
@@ -817,8 +839,13 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
         break;
       goal_state.setJointGroupPositions(jmg, goal);
       goal_state.updateCollisionBodyTransforms();
+      m_mtx.lock();
       if (!planning_scene->isStateValid(goal_state))
+      {
+        m_mtx.unlock();
         continue;
+      }
+      m_mtx.unlock();
       moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
       req.goal_constraints.push_back(joint_goal);
     }
@@ -931,8 +958,14 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
       {
         goal_state.setJointGroupPositions(jmg, grasp_pose->getConfiguration());
         goal_state.updateCollisionBodyTransforms();
+        m_mtx.lock();
         if (!planning_scene->isStateValid(goal_state))
+        {
+          m_mtx.unlock();
           continue;
+        }
+        m_mtx.unlock();
+
         moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
         req.goal_constraints.push_back(joint_goal);
         if (ik_goal++>=max_ik_goal_number)
