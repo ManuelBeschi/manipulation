@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(outbound_place)
-add_compile_options(-std=c++11)
-set(CMAKE_BUILD_TYPE Debug)
+add_compile_options(-std=c++11 -funroll-loops -Wall -Ofast)
+set(CMAKE_BUILD_TYPE Release)
+
 find_package(catkin REQUIRED COMPONENTS
   manipulation_msgs
   moveit_planning_helper

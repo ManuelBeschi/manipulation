@@ -273,7 +273,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
 
   }
 
-  ROS_INFO("Plan approach for group %s",group_name.c_str());
+  ROS_PROTO("Plan approach for group %s",group_name.c_str());
   m_mtx.lock();
   if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
   {
