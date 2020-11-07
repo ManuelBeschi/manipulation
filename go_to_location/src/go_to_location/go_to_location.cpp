@@ -275,19 +275,22 @@ bool GoToLocation::execute(const std::string& group_name,
 
 bool GoToLocation::wait(const std::string& group_name)
 {
-  ros::Time t0=ros::Time::now();
-  while (std::isnan(m_fjt_result.at(group_name)))
-  {
-    ros::Duration(0.01).sleep();
+  m_fjt_clients.at(group_name)->waitForResult();
+  m_fjt_result.at(group_name)=m_fjt_clients.at(group_name)->getResult()->error_code;
 
-    if ((ros::Time::now()-t0).toSec()>600)
-    {
-      ROS_ERROR("%s is waiting more than ten minutes, stop it",group_name.c_str());
-      return false;
-    }
-    if ((ros::Time::now()-t0).toSec()>10)
-      ROS_WARN_THROTTLE(10,"%s is waiting for %f seconds",group_name.c_str(),(ros::Time::now()-t0).toSec());
-  }
+//  ros::Time t0=ros::Time::now();
+//  while (std::isnan(m_fjt_result.at(group_name)))
+//  {
+//    ros::Duration(0.01).sleep();
+
+//    if ((ros::Time::now()-t0).toSec()>600)
+//    {
+//      ROS_ERROR("%s is waiting more than ten minutes, stop it",group_name.c_str());
+//      return false;
+//    }
+//    if ((ros::Time::now()-t0).toSec()>10)
+//      ROS_WARN_THROTTLE(10,"%s is waiting for %f seconds",group_name.c_str(),(ros::Time::now()-t0).toSec());
+//  }
   return !std::isnan(m_fjt_result.at(group_name));
 }
 
