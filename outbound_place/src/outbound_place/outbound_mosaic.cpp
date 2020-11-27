@@ -54,10 +54,14 @@ namespace pickplace
 
 
 
-    if (!m_pnh.getParam("group_names",m_group_names))
+    if (!m_pnh.getParam("groups",m_tool_names))
     {
-      ROS_ERROR("parameter %s/group_names is not defined",m_pnh.getNamespace().c_str());
+      ROS_ERROR("parameter %s/groups is not defined",m_pnh.getNamespace().c_str());
       return false;
+    }
+    for (const std::pair<std::string,std::string>& p: m_tool_names)
+    {
+      m_group_names.push_back(p.first);
     }
 
     tf::TransformListener listener;
@@ -207,6 +211,14 @@ namespace pickplace
       moveit::core::JointModelGroup* jmg = m_kinematic_model->getJointModelGroup(group_name);
       m_joint_models.insert(std::pair<std::string,moveit::core::JointModelGroup*>(group_name,jmg));
 
+
+      Eigen::Vector3d gravity;
+      gravity << 0,0,-9.806;
+      rosdyn::ChainPtr chain=rosdyn::createChain(*robot_model_loader.getURDF(),world_frame,m_tool_names.at(group_name),gravity);
+      chain->setInputJointsName(jmg->getActiveJointModelNames());
+      m_chains.insert(std::pair<std::string,rosdyn::ChainPtr>(group_name,chain));
+
+
       std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>> as;
       as.reset(new actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>(m_nh,group_name+"/place",
                                                                                           boost::bind(&OutboundMosaic::placeObjectGoalCb,this,_1,group_name),
@@ -222,6 +234,8 @@ namespace pickplace
       std::map<std::string,std::vector<Eigen::VectorXd>> slot_configurations;
       std::map<std::string,std::vector<Eigen::VectorXd>> approach_slot_configurations;
 
+      std::vector<Eigen::VectorXd> sols;
+
       for (const std::pair<std::string, Eigen::Affine3d>& p: m_slot_map)
       {
         std::string place_id=p.first;
@@ -231,7 +245,6 @@ namespace pickplace
         Eigen::Affine3d T_w_s; // world <- slot
         T_w_s=m_slot_map.at(place_id);
         T_w_as=m_approach_slot_map.at(place_id);
-        std::vector<Eigen::VectorXd> sols;
         std::vector<std::vector<double>> sols_stl;
 
         if (!m_pnh.hasParam("slot_ik/"+place_id+"/"+group_name))
@@ -273,6 +286,7 @@ namespace pickplace
           }
         }
         slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+        std::vector<Eigen::VectorXd> approach_sols=sols;
 
 
         if (!m_pnh.hasParam("approach_ik/"+place_id+"/"+group_name))
@@ -280,22 +294,22 @@ namespace pickplace
 
 
           // then,search solutions for the approach pose
-          if (!ik(group_name,T_w_as,sols,sols.size()))
+          if (!ik(group_name,T_w_as,approach_sols,approach_sols.size()))
           {
             ROS_WARN("No Ik solution for the approach to slot %s",place_id.c_str());
-            sols.clear();
-            slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
-            approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+            approach_sols.clear();
+            slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,approach_sols));
+            approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,approach_sols));
             continue;
           }
-          ROS_DEBUG("Find %zu solutions to approach the slot %s (group=%s)",sols.size(),place_id.c_str(),group_name.c_str());
+          ROS_DEBUG("Find %zu solutions to approach the slot %s (group=%s)",approach_sols.size(),place_id.c_str(),group_name.c_str());
 
-          sols_stl.resize(sols.size());
-          for (size_t isolution=0;isolution<sols.size();isolution++)
+          sols_stl.resize(approach_sols.size());
+          for (size_t isolution=0;isolution<approach_sols.size();isolution++)
           {
-            sols_stl.at(isolution).resize(sols.at(isolution).size());
-            for (size_t iax=0;iax<sols.at(isolution).size();iax++)
-              sols_stl.at(isolution).at(iax)=sols.at(isolution)(iax);
+            sols_stl.at(isolution).resize(approach_sols.at(isolution).size());
+            for (size_t iax=0;iax<approach_sols.at(isolution).size();iax++)
+              sols_stl.at(isolution).at(iax)=approach_sols.at(isolution)(iax);
           }
           rosparam_utilities::setParam(m_pnh,"approach_ik/"+place_id+"/"+group_name,sols_stl);
         }
@@ -306,15 +320,15 @@ namespace pickplace
             ROS_ERROR("parameter %s/approach_ik/%s/%s is not correct",m_pnh.getNamespace().c_str(),place_id.c_str(),group_name.c_str());
             return false;
           }
-          sols.resize(sols_stl.size());
-          for (size_t isolution=0;isolution<sols.size();isolution++)
+          approach_sols.resize(sols_stl.size());
+          for (size_t isolution=0;isolution<approach_sols.size();isolution++)
           {
-            sols.at(isolution).resize(sols_stl.at(isolution).size());
-            for (size_t iax=0;iax<sols.at(isolution).size();iax++)
-              sols.at(isolution)(iax)=sols_stl.at(isolution).at(iax);
+            approach_sols.at(isolution).resize(sols_stl.at(isolution).size());
+            for (size_t iax=0;iax<approach_sols.at(isolution).size();iax++)
+              approach_sols.at(isolution)(iax)=sols_stl.at(isolution).at(iax);
           }
         }
-        approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,sols));
+        approach_slot_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(place_id,approach_sols));
 
       }
       m_slot_configurations.insert(std::pair<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>>(group_name,slot_configurations));
@@ -603,10 +617,12 @@ namespace pickplace
     bool found=false;
     planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
 
+    Eigen::VectorXd js(actual_configuration.size());
+    Eigen::VectorXd seed(actual_configuration.size());
+
     for (unsigned int iter=0;iter<N_MAX_ITER;iter++)
     {
-      ROS_FATAL_COND(iter%100==0,"iter=%u, solutions.size()=%zu",iter,solutions.size());
-      if (solutions.size()>=3*N_ITER)
+      if (solutions.size()>=N_ITER)
         break;
       if (iter<n_seed)
       {
@@ -621,15 +637,18 @@ namespace pickplace
         state.setToRandomPositions();
       }
 
-      if (state.setFromIK(jmg,(Eigen::Isometry3d)T_w_a.matrix()))
+      state.copyJointGroupPositions(group_name,seed);
+      if (m_chains.at(group_name)->computeLocalIk(js,T_w_a,seed,1e-4,ros::Duration(0.002)))
       {
+        state.setJointGroupPositions(group_name,js);
         if (!state.satisfiesBounds())
           continue;
+
         state.updateCollisionBodyTransforms();
         if (!planning_scene->isStateValid(state))
           continue;
-        Eigen::VectorXd js;
-        state.copyJointGroupPositions(group_name,js);
+
+//        state.copyJointGroupPositions(group_name,js);
         double dist=(js-actual_configuration).norm();
         if (solutions.size()==0)
         {

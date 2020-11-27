@@ -53,7 +53,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <rosparam_utilities/rosparam_utilities.h>
 #include <mutex>
-
+#include <rosdyn_core/primitives.h>
+#include <tf/transform_broadcaster.h>
+#include <tf_conversions/tf_eigen.h>
+#include <moveit_planning_helper/manage_trajectories.h>
 #define N_MAX_ITER 2000
 #define N_TRIAL 30
 #define TOLERANCE 1e-6
@@ -91,10 +94,13 @@ protected:
   std::map<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>> m_fjt_clients;
   std::map<std::string,std::string> m_tool_names;
   std::map<std::string,double> m_fjt_result;
+  std::map<std::string,rosdyn::ChainPtr> m_chains;
 
   std::map<std::string,int> m_max_ik_goal_number;
   std::string world_frame="world";
 
+  tf::TransformBroadcaster m_broadcaster;
+  std::map<std::string,tf::Transform> m_tf;
 
   ros::ServiceServer m_add_obj_srv;
   ros::ServiceServer m_add_box_srv;
@@ -191,6 +197,7 @@ public:
 
   friend std::ostream& operator<<  (std::ostream& os, const PickObjects& pick_objs);
 
+  void publishTF();
 };
 
 

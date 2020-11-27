@@ -53,8 +53,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <object_loader_msgs/detachObject.h>
 #include <tf/transform_listener.h>
 #include <tf_conversions/tf_eigen.h>
-
+#include <rosdyn_core/primitives.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
+
 #define N_ITER 30
 #define N_MAX_ITER 2000
 #define TOLERANCE 1e-6
@@ -79,7 +80,10 @@ protected:
   std::map<std::string,moveit::core::JointModelGroup*> m_joint_models;
   std::map<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>>> m_as;
   std::map<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>> m_fjt_clients;
+  std::map<std::string,rosdyn::ChainPtr> m_chains;
 
+  std::string world_frame="world";
+  std::map<std::string,std::string> m_tool_names;
 
   std::vector<std::string> m_request_adapters;
   std::map<std::string,double> m_fjt_result;

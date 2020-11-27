@@ -24,6 +24,7 @@ int main(int argc, char **argv)
   while (ros::ok())
   {
     lp.sleep();
+    pick.publishTF();
   }
   return 0;
 }

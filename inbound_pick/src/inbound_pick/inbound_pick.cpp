@@ -55,9 +55,10 @@ InboundBox::InboundBox(const std::string &name, const Eigen::Affine3d T_w_box, c
 bool InboundBox::addObject(const ObjectPtr &object)
 {
   std::string id=object->getId();
+
   if (m_objects.find(id)!=m_objects.end())
   {
-    ROS_ERROR("this id is already used");
+    ROS_ERROR("this id is already used. id=%s, type=%s",object->getId().c_str(),object->getType().c_str());
     return false;
   }
   m_objects.insert(std::pair<std::string,ObjectPtr>(id,object));
@@ -103,6 +104,8 @@ bool InboundBox::removeObject(const std::string &object_id)
     return false;
   }
   m_objects.erase(it);
+
+
   std::string type=it->second->getType();
 
   std::map<std::string,std::vector<std::string>>::iterator type_it;

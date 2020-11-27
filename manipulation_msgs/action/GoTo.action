@@ -12,7 +12,8 @@ duration actual_duration
 duration planning_duration
 int32 trials
 duration estimated_hrc_execution_duration
-
+float64 path_length
+float64 cost
 ---
 int8 phase
 int8 GoingToLocation=1

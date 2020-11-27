@@ -18,6 +18,8 @@ duration planning_duration
 duration grasping_object_duration
 int32 trials
 duration estimated_hrc_execution_duration
+float64 path_length
+float64 cost
 
 ---
 int8 phase
