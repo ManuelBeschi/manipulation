@@ -138,6 +138,7 @@ int main(int argc, char **argv)
       return 0;
     }
 
+    ros::Duration(0.1).sleep();
   }
 
 
