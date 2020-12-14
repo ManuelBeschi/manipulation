@@ -385,6 +385,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     t_planning=ros::Time::now();
     action_res.planning_duration+=(t_planning-t_planning_init);
     action_res.expected_execution_duration+=pick_plan.trajectory_.joint_trajectory.points.back().time_from_start;
+    action_res.path_length+=trajectory_processing::computeTrajectoryLength(plan.trajectory_.joint_trajectory);
 
     if (!selected_box->removeObject(selected_object->getId()))
     {
@@ -473,6 +474,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     t_planning=ros::Time::now();
     action_res.planning_duration+=(t_planning-t_planning_init);
     action_res.expected_execution_duration+=return_plan.trajectory_.joint_trajectory.points.back().time_from_start;
+    action_res.path_length+=trajectory_processing::computeTrajectoryLength(plan.trajectory_.joint_trajectory);
 
 
 //    ROS_PROTO("waiting to execute trj");

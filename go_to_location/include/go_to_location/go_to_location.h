@@ -54,7 +54,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <tf_conversions/tf_eigen.h>
 #include <rosparam_utilities/rosparam_utilities.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
-
+#include <moveit_planning_helper/manage_trajectories.h>
 
 namespace manipulation_skills
 {

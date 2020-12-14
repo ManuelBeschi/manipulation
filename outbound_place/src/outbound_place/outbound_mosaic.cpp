@@ -448,6 +448,7 @@ namespace pickplace
     }
     action_res.planning_duration+=t_approach_plan-t_approach_plan_init;
     action_res.expected_execution_duration+=approac_pick_plan.trajectory_.joint_trajectory.points.back().time_from_start;
+    action_res.path_length+=trajectory_processing::computeTrajectoryLength(approac_pick_plan.trajectory_.joint_trajectory);
 
 
     tf::poseEigenToMsg(T_w_as,target.pose);
@@ -481,6 +482,7 @@ namespace pickplace
     ros::Time t_pick_plan=ros::Time::now();
     action_res.planning_duration+=t_pick_plan-t_pick_plan_init;
     action_res.expected_execution_duration+=plan_plan.trajectory_.joint_trajectory.points.back().time_from_start;
+    action_res.path_length+=trajectory_processing::computeTrajectoryLength(plan_plan.trajectory_.joint_trajectory);
 
     ROS_DEBUG("plan pick movement in %f second",(t_pick_plan-t_approach_execute).toSec());
 
@@ -579,6 +581,7 @@ namespace pickplace
     ros::Time return_time=ros::Time::now();
     action_res.planning_duration+=return_time-return_time_init;
     action_res.expected_execution_duration+=return_plan.trajectory_.joint_trajectory.points.back().time_from_start;
+    action_res.path_length+=trajectory_processing::computeTrajectoryLength(return_plan.trajectory_.joint_trajectory);
 
 
     tf::poseEigenToMsg(T_w_as,target.pose);

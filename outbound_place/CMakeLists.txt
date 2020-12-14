@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   eigen_conversions
 )
 
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES outbound_place
@@ -27,7 +28,7 @@ catkin_package(
 ###########
 
 ## Specify additional locations of header files
-## Your package locations should be listed before other locations
+#Your package locations should be listed before other locations
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}

@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <go_to_location/go_to_location.h>
-
+#include <stdlib.h>
 
 namespace manipulation_skills
 {
@@ -189,6 +189,7 @@ void GoToLocation::gotoGoalCb(const manipulation_msgs::GoToGoalConstPtr& goal,
   ros::Time t_planning=ros::Time::now();
   action_res.planning_duration+=(t_planning-t_planning_init);
   action_res.expected_execution_duration+=approac_pick_plan.trajectory_.joint_trajectory.points.back().time_from_start;
+  action_res.path_length+=trajectory_processing::computeTrajectoryLength(approac_pick_plan.trajectory_.joint_trajectory);
 
   execute(group_name,approac_pick_plan);
   if (!wait(group_name))

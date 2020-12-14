@@ -55,6 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <tf_conversions/tf_eigen.h>
 #include <rosdyn_core/primitives.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
+#include <moveit_planning_helper/manage_trajectories.h>
 
 #define N_ITER 30
 #define N_MAX_ITER 2000
