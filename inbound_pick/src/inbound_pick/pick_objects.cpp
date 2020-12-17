@@ -31,6 +31,8 @@ bool PickObjects::init()
   }
 
 
+
+
   // create groups
   for (const std::string& group_name: m_group_names)
   {
@@ -41,6 +43,13 @@ bool PickObjects::init()
       return false;
     }
 
+    bool use_single_goal;
+    if (!m_pnh.getParam(group_name+"/use_single_goal",use_single_goal))
+    {
+      ROS_INFO("parameter %s/use_single_goal is not defined, use false (multi goal enable)",m_pnh.getNamespace().c_str());
+      use_single_goal=false;
+    }
+    m_use_single_goal.insert(std::pair<std::string,bool>(group_name,use_single_goal));
 
     m_planning_scene.insert(std::pair<std::string,std::shared_ptr<planning_scene::PlanningScene>>(group_name,std::make_shared<planning_scene::PlanningScene>(m_kinematic_model)));
 
@@ -267,6 +276,8 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
     }
     moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
     req.goal_constraints.push_back(joint_goal);
+    if (m_use_single_goal.at(group_name))
+      break;
 
   }
   ROS_DEBUG("Found %zu solutions for approach slots",sols.size());
@@ -367,7 +378,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
 
     pickplace::ObjectPtr selected_object;
     pickplace::GraspPosePtr selected_grasp_pose;
-ROS_INFO("QUI1");
+
     t_planning_init=ros::Time::now();
     selected_box->getMutex().lock();
     plan=planToObject(group_name,
@@ -380,7 +391,7 @@ ROS_INFO("QUI1");
                       selected_grasp_pose
                       );
 
-    ROS_INFO("QUI1");
+
     if (!result)
     {
       action_res.result=manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
@@ -393,7 +404,6 @@ ROS_INFO("QUI1");
     action_res.planning_duration+=(t_planning-t_planning_init);
     action_res.expected_execution_duration+=plan.trajectory_.joint_trajectory.points.back().time_from_start;
     action_res.path_length+=trajectory_processing::computeTrajectoryLength(plan.trajectory_.joint_trajectory);
-    ROS_INFO("QUI1");
 
     if (!selected_box->removeObject(selected_object->getId()))
     {
@@ -411,12 +421,10 @@ ROS_INFO("QUI1");
       selected_box->addObject(selected_object);
       return;
     }
-    ROS_INFO("QUI1");
 
     disp_trj.trajectory.at(0)=(plan.trajectory_);
     disp_trj.trajectory_start=plan.start_state_;
     m_display_publisher.publish(disp_trj);
-    ROS_INFO("QUI1");
 
     tf::poseEigenToMsg(selected_grasp_pose->getPose(),target.pose);
     m_target_pub.publish(target);
@@ -842,7 +850,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
 
   if (!group->startStateMonitor(2))
   {
-    ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
+    ROS_ERROR("%s: unable to get actual state",m_pnh.getNamespace().c_str());
     result=moveit::planning_interface::MoveItErrorCode::UNABLE_TO_AQUIRE_SENSOR_DATA;
     return plan;
   }
@@ -866,6 +874,11 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
 
   planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
 
+  if (m_use_single_goal.at(group_name))
+    ROS_INFO_THROTTLE(5,"%s: Single goal planning",group_name.c_str());
+  else
+    ROS_INFO_THROTTLE(5,"%s: Multi goal planning",group_name.c_str());
+
   for (const std::pair<std::string,InboundBoxPtr>& box: possible_boxes)
   {
     std::vector<Eigen::VectorXd> box_goals=box.second->getConfigurations(group_name);
@@ -884,6 +897,12 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
 
       moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
       req.goal_constraints.push_back(joint_goal);
+      if (m_use_single_goal.at(group_name))
+        break;
+    }
+    if (req.goal_constraints.size()>0 && m_use_single_goal.at(group_name))
+    {
+      break;
     }
   }
   if (req.goal_constraints.size()==0)
@@ -949,11 +968,8 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
                                                                                )
 {
   std::vector<ObjectPtr> objects=selected_box->getObjectsByTypes(type_name);
-  ROS_INFO("QUI1");
   moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
-  ROS_INFO("QUI1");
   moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
-  ROS_INFO("QUI1");
   ROS_PROTO("possible object %zu", objects.size());
   moveit::planning_interface::MoveGroupInterface::Plan plan;
   int max_ik_goal_number=m_max_ik_goal_number.at(group_name);
@@ -982,20 +998,15 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
   req.allowed_planning_time=5;
   robot_state::RobotState goal_state(m_kinematic_model);
 
-  ROS_INFO("QUI1");
   planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
-  ROS_INFO("QUI1");
 
   for (const ObjectPtr& obj: objects)
   {
     int ik_goal=0;
-    ROS_INFO("QUI1");
     for (const GraspPosePtr& grasp_pose: obj->getGraspPoses(group_name))
     {
-      ROS_INFO("QUI1");
       if (!grasp_pose->getToolName().compare(tool_name))
       {
-        ROS_INFO("QUI1");
         goal_state.setJointGroupPositions(jmg, grasp_pose->getConfiguration());
         goal_state.updateCollisionBodyTransforms();
         if (!planning_scene->isStateValid(goal_state))
@@ -1008,12 +1019,15 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
         req.goal_constraints.push_back(joint_goal);
         if (ik_goal++>=max_ik_goal_number)
           break;
-
+        if (m_use_single_goal.at(group_name))
+          break;
       }
     }
-    ROS_INFO("QUI1");
+    if (req.goal_constraints.size()>0 && m_use_single_goal.at(group_name))
+    {
+      break;
+    }
   }
-  ROS_INFO("QUI1");
   if (req.goal_constraints.size()==0)
   {
     ROS_ERROR("Inbound server: no valid goals");
@@ -1022,7 +1036,6 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
 
   }
 
-  ROS_INFO("QUI1");
   if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
   {
     ROS_ERROR("Could not compute plan successfully");
@@ -1030,7 +1043,6 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
     return plan;
   }
 
-  ROS_INFO("QUI1");
   plan.planning_time_=res.planning_time_;
 
   res.trajectory_->getRobotTrajectoryMsg(plan.trajectory_);

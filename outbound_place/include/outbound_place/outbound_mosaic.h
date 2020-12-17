@@ -86,6 +86,7 @@ protected:
 
   std::string world_frame="world";
   std::map<std::string,std::string> m_tool_names;
+  std::map<std::string,bool> m_use_single_goal;
 
   std::vector<std::string> m_request_adapters;
   std::map<std::string,double> m_fjt_result;

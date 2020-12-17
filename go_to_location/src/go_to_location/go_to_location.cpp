@@ -148,7 +148,7 @@ void GoToLocation::gotoGoalCb(const manipulation_msgs::GoToGoalConstPtr& goal,
   moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
   if (!group->startStateMonitor(2))
   {
-    ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
+    ROS_ERROR("%s: unable to get actual state",m_pnh.getNamespace().c_str());
     action_res.result=manipulation_msgs::GoToResult::SceneError;
     as->setAborted(action_res,"unable to get actual state");
     return;

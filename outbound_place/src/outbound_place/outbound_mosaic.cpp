@@ -201,6 +201,14 @@ namespace pickplace
         return false;
       }
 
+      bool use_single_goal;
+      if (!m_pnh.getParam(group_name+"/use_single_goal",use_single_goal))
+      {
+        ROS_DEBUG("parameter %s/use_single_goal is not defined, use multi goal",m_pnh.getNamespace().c_str());
+        use_single_goal=false;
+      }
+      m_use_single_goal.insert(std::pair<std::string,bool>(group_name,use_single_goal));
+
       planning_pipeline::PlanningPipelinePtr planning_pipeline=std::make_shared<planning_pipeline::PlanningPipeline>(m_kinematic_model, m_nh, planner_plugin_name, m_request_adapters);
       m_planning_pipeline.insert(std::pair<std::string,planning_pipeline::PlanningPipelinePtr>(group_name,planning_pipeline));
 
@@ -737,18 +745,27 @@ namespace pickplace
 
     std::vector<Eigen::VectorXd> sols=m_slot_configurations.at(group_name).at(place_id);
 
+    planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
 
     for (const Eigen::VectorXd& goal: sols)
     {
 
       goal_state.setJointGroupPositions(jmg, goal);
+      goal_state.updateCollisionBodyTransforms();
+      if (!planning_scene->isStateValid(goal_state))
+      {
+        continue;
+      }
+
       moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
       req.goal_constraints.push_back(joint_goal);
+
+      if (m_use_single_goal.at(group_name))
+        break;
 
     }
     ROS_PROTO("Found %zu solution",sols.size());
 
-    planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
 
     if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
     {
@@ -779,7 +796,7 @@ namespace pickplace
 
     if (!group->startStateMonitor(2))
     {
-      ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
+      ROS_ERROR("%s: unable to get actual state",m_pnh.getNamespace().c_str());
     }
     robot_state::RobotState state = *group->getCurrentState();
     moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
@@ -792,18 +809,30 @@ namespace pickplace
     robot_state::RobotState goal_state(m_kinematic_model);
 
     std::vector<Eigen::VectorXd> sols=m_approach_slot_configurations.at(group_name).at(place_id);
+    planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
 
+    if (m_use_single_goal.at(group_name))
+      ROS_INFO_THROTTLE(5,"%s: Single goal planning",group_name.c_str());
+    else
+      ROS_INFO_THROTTLE(5,"%s: Multi goal planning",group_name.c_str());
     for (const Eigen::VectorXd& goal: sols)
     {
 
       goal_state.setJointGroupPositions(jmg, goal);
+      goal_state.updateCollisionBodyTransforms();
+      if (!planning_scene->isStateValid(goal_state))
+      {
+        continue;
+      }
       moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
       req.goal_constraints.push_back(joint_goal);
+
+      if (m_use_single_goal.at(group_name))
+        break;
 
     }
     ROS_PROTO("Found %zu solution",sols.size());
 
-    planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
     if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
     {
       ROS_ERROR("Could not compute plan successfully");

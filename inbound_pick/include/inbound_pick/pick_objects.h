@@ -85,6 +85,8 @@ protected:
   ros::Publisher m_display_publisher;
 
 
+  std::map<std::string,bool> m_use_single_goal;
+
   std::mutex m_mtx;
 
   ros::NodeHandle m_nh;
