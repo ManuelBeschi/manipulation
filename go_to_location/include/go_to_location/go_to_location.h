@@ -55,6 +55,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <rosparam_utilities/rosparam_utilities.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <moveit_planning_helper/manage_trajectories.h>
+#include <moveit_msgs/DisplayTrajectory.h>
 
 namespace manipulation_skills
 {
@@ -76,6 +77,7 @@ protected:
   std::vector<std::string> m_request_adapters;
   std::map<std::string,double> m_fjt_result;
 
+  ros::Publisher m_display_publisher;
 
   ros::Publisher m_target_pub;
   ros::NodeHandle m_nh;

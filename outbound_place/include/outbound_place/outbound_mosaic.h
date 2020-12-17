@@ -56,6 +56,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <rosdyn_core/primitives.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <moveit_planning_helper/manage_trajectories.h>
+#include <moveit_msgs/DisplayTrajectory.h>
 
 #define N_ITER 30
 #define N_MAX_ITER 2000
@@ -95,6 +96,8 @@ protected:
   ros::Publisher m_target_pub;
   ros::NodeHandle m_nh;
   ros::NodeHandle m_pnh;
+
+  ros::Publisher m_display_publisher;
 
   std::map<std::string, Eigen::Affine3d, std::less<std::string>,
                     Eigen::aligned_allocator<std::pair<const std::string, Eigen::Affine3d> > > m_slot_map;

@@ -44,6 +44,7 @@ namespace pickplace
     Eigen::Affine3d T_w_frame;
     Eigen::Affine3d T_w_slot;
 
+    m_display_publisher = m_nh.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
 
     std::string frame;
     if (!m_pnh.getParam("frame",frame))
@@ -99,20 +100,20 @@ namespace pickplace
       ROS_ERROR("The param is not a list of slots" );
       return false;
     }
-    ROS_DEBUG("there are %zu slots",slots_config.size());
-    for(size_t i=0; i < slots_config.size(); i++)
+    ROS_DEBUG("there are %d slots",slots_config.size());
+    for(int i=0; i < slots_config.size(); i++)
     {
       XmlRpc::XmlRpcValue slot = slots_config[i];
       if( slot.getType() != XmlRpc::XmlRpcValue::TypeStruct)
       {
-        ROS_WARN("The element #%zu is not a struct", i);
+        ROS_WARN("The element #%d is not a struct", i);
         continue;
       }
 
 
       if( !slot.hasMember("name") )
       {
-        ROS_WARN("The element #%zu has not the field 'name'", i);
+        ROS_WARN("The element #%d has not the field 'name'", i);
         return false;
       }
       std::string name=rosparam_utilities::toString(slot["name"]);
@@ -399,7 +400,7 @@ namespace pickplace
     moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
     if (!group->startStateMonitor(2))
     {
-      ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
+      ROS_ERROR("%s: nable to get actual state",m_pnh.getNamespace().c_str());
       action_res.result=manipulation_msgs::PlaceObjectsResult::SceneError;
       as->setAborted(action_res,"unable to get actual state");
       m_slot_busy.at(place_id)=false;
@@ -454,6 +455,11 @@ namespace pickplace
     tf::poseEigenToMsg(T_w_as,target.pose);
     m_target_pub.publish(target);
 
+    moveit_msgs::DisplayTrajectory disp_trj;
+    disp_trj.trajectory.push_back(approac_pick_plan.trajectory_);
+    disp_trj.model_id=m_kinematic_model->getName();
+    disp_trj.trajectory_start=approac_pick_plan.start_state_;
+    m_display_publisher.publish(disp_trj);
     execute(group_name,approac_pick_plan);
 
     ros::Time t_approach_execute=ros::Time::now();
@@ -500,6 +506,10 @@ namespace pickplace
 
     tf::poseEigenToMsg(T_w_s,target.pose);
     m_target_pub.publish(target);
+    disp_trj.trajectory.at(0)=(plan_plan.trajectory_);
+    disp_trj.trajectory_start=plan_plan.start_state_;
+    m_display_publisher.publish(disp_trj);
+
     execute(group_name,plan_plan);
     ros::Time t_pick_execute=ros::Time::now();
     ROS_DEBUG("execute approach movement in %f second",(t_pick_execute-t_approach_wait).toSec());
@@ -554,7 +564,7 @@ namespace pickplace
 
     if (!group->startStateMonitor(2))
     {
-      ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
+      ROS_ERROR("%s: unable to get actual state",m_pnh.getNamespace().c_str());
       action_res.result=manipulation_msgs::PlaceObjectsResult::SceneError;
       as->setAborted(action_res,"unable to get actual state");
       m_slot_busy.at(place_id)=false;
@@ -586,6 +596,9 @@ namespace pickplace
 
     tf::poseEigenToMsg(T_w_as,target.pose);
     m_target_pub.publish(target);
+    disp_trj.trajectory.at(0)=(return_plan.trajectory_);
+    m_display_publisher.publish(disp_trj);
+    disp_trj.trajectory_start=return_plan.start_state_;
     execute(group_name,return_plan);
 
     if (!wait(group_name))

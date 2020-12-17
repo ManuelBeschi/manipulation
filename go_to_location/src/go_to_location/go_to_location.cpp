@@ -42,6 +42,7 @@ bool GoToLocation::init()
   Eigen::Affine3d T_frame_slot;
   Eigen::Affine3d T_w_frame;
   Eigen::Affine3d T_w_slot;
+  m_display_publisher = m_nh.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
 
 
   std::string frame;
@@ -190,6 +191,12 @@ void GoToLocation::gotoGoalCb(const manipulation_msgs::GoToGoalConstPtr& goal,
   action_res.planning_duration+=(t_planning-t_planning_init);
   action_res.expected_execution_duration+=approac_pick_plan.trajectory_.joint_trajectory.points.back().time_from_start;
   action_res.path_length+=trajectory_processing::computeTrajectoryLength(approac_pick_plan.trajectory_.joint_trajectory);
+
+  moveit_msgs::DisplayTrajectory disp_trj;
+  disp_trj.trajectory.push_back(approac_pick_plan.trajectory_);
+  disp_trj.model_id=m_kinematic_model->getName();
+  m_display_publisher.publish(disp_trj);
+  disp_trj.trajectory_start=approac_pick_plan.start_state_;
 
   execute(group_name,approac_pick_plan);
   if (!wait(group_name))

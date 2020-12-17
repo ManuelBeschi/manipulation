@@ -57,10 +57,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <tf/transform_broadcaster.h>
 #include <tf_conversions/tf_eigen.h>
 #include <moveit_planning_helper/manage_trajectories.h>
+#include <moveit_msgs/DisplayTrajectory.h>
+
 #define N_MAX_ITER 2000
 #define N_TRIAL 30
 #define TOLERANCE 1e-6
-
 
 namespace pickplace {
 
@@ -80,6 +81,8 @@ protected:
   robot_model::RobotModelPtr m_kinematic_model;
   std::map<std::string,planning_pipeline::PlanningPipelinePtr> m_planning_pipeline;
   std::vector<std::string> m_request_adapters;
+
+  ros::Publisher m_display_publisher;
 
 
   std::mutex m_mtx;
