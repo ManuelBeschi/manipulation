@@ -58,6 +58,10 @@ namespace pickplace
     if (!m_pnh.getParam("groups",m_tool_names))
     {
       ROS_ERROR("parameter %s/groups is not defined",m_pnh.getNamespace().c_str());
+      if (m_pnh.hasParam("groups"))
+      {
+        ROS_ERROR("parameter %s/groups is not wrong",m_pnh.getNamespace().c_str());
+      }
       return false;
     }
     for (const std::pair<std::string,std::string>& p: m_tool_names)
