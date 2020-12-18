@@ -52,6 +52,32 @@ bool PickObjects::init()
     m_use_single_goal.insert(std::pair<std::string,bool>(group_name,use_single_goal));
 
     m_planning_scene.insert(std::pair<std::string,std::shared_ptr<planning_scene::PlanningScene>>(group_name,std::make_shared<planning_scene::PlanningScene>(m_kinematic_model)));
+    collision_detection::AllowedCollisionMatrix acm=m_planning_scene.at(group_name)->getAllowedCollisionMatrixNonConst();
+    std::vector<std::string> allowed_collisions;
+    bool use_disable_collisions;
+    if (m_pnh.getParam(group_name+"/use_disable_collisions",use_disable_collisions))
+    {
+      if (!m_pnh.getParam(group_name+"/disable_collisions",allowed_collisions))
+      {
+        ROS_INFO("parameter %s/%s/disable_collisions is not defined, use default",m_pnh.getNamespace().c_str(),group_name.c_str());
+      }
+      else
+      {
+        for (const std::string& link: allowed_collisions)
+        {
+          ROS_INFO("Disable collision detection for group %s and link %s",group_name.c_str(),link.c_str());
+          acm.setEntry(link,true);
+        }
+      }
+    }
+    else
+    {
+      if (m_pnh.getParam(group_name+"/disable_collisions",allowed_collisions))
+      {
+        ROS_WARN("in group %s/%s you set disable_collisions but not use_disable_collisions, it is ignored",m_pnh.getNamespace().c_str(),group_name.c_str());
+      }
+    }
+    
 
     planning_pipeline::PlanningPipelinePtr planning_pipeline=std::make_shared<planning_pipeline::PlanningPipeline>(m_kinematic_model, m_nh, planner_plugin_name, m_request_adapters);
     m_planning_pipeline.insert(std::pair<std::string,planning_pipeline::PlanningPipelinePtr>(group_name,planning_pipeline));
@@ -222,7 +248,7 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
 
   if (!group->startStateMonitor(2))
   {
-    ROS_ERROR("unable to get actual state",m_pnh.getNamespace().c_str());
+    ROS_ERROR("%s: unable to get actual state",m_pnh.getNamespace().c_str());
     result=moveit::planning_interface::MoveItErrorCode::UNABLE_TO_AQUIRE_SENSOR_DATA;
     return plan;
   }

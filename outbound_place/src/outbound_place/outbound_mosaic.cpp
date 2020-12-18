@@ -194,6 +194,31 @@ namespace pickplace
 
       m_planning_scene.insert(std::pair<std::string,std::shared_ptr<planning_scene::PlanningScene>>(group_name,std::make_shared<planning_scene::PlanningScene>(m_kinematic_model)));
 
+      collision_detection::AllowedCollisionMatrix acm=m_planning_scene.at(group_name)->getAllowedCollisionMatrixNonConst();
+      std::vector<std::string> allowed_collisions;
+      bool use_disable_collisions;
+      if (m_pnh.getParam(group_name+"/use_disable_collisions",use_disable_collisions))
+      {
+        if (!m_pnh.getParam(group_name+"/disable_collisions",allowed_collisions))
+        {
+          ROS_INFO("parameter %s/%s/disable_collisions is not defined, use default",m_pnh.getNamespace().c_str(),group_name.c_str());
+        }
+        else
+        {
+          for (const std::string& link: allowed_collisions)
+          {
+            ROS_INFO("Disable collision detection for group %s and link %s",group_name.c_str(),link.c_str());
+            acm.setEntry(link,true);
+          }
+        }
+      }
+      else
+      {
+        if (m_pnh.getParam(group_name+"/disable_collisions",allowed_collisions))
+        {
+          ROS_WARN("in group %s/%s you set disable_collisions but not use_disable_collisions, it is ignored",m_pnh.getNamespace().c_str(),group_name.c_str());
+        }
+      }
       std::string planner_plugin_name;
       if (!m_pnh.getParam(group_name+"/planning_plugin", planner_plugin_name))
       {
