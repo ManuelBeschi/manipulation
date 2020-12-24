@@ -90,10 +90,10 @@ void Location::addReturnIk(const std::string &group_name, const std::vector<Eige
 LocationManager::LocationManager(const std::map<std::string, std::shared_ptr<planning_scene::PlanningScene> > &planning_scene,
                                  const std::map<std::string, moveit::planning_interface::MoveGroupInterfacePtr> &groups,
                                  const std::map<std::string, moveit::core::JointModelGroup *> &joint_models, const ros::NodeHandle& nh):
+  m_nh(nh),
   m_planning_scene(planning_scene),
   m_groups(groups),
-  m_joint_models(joint_models),
-  m_nh(nh)
+  m_joint_models(joint_models)
 {
   m_add_loc_srv=m_nh.advertiseService("add",&LocationManager::addLocationsCb,this);
   m_remove_loc_srv=m_nh.advertiseService("remove",&LocationManager::removeLocationsCb,this);
@@ -126,7 +126,7 @@ bool LocationManager::addLocation(LocationPtr &location)
       for (size_t isolution=0;isolution<sols.size();isolution++)
       {
         sols_stl.at(isolution).resize(sols.at(isolution).size());
-        for (size_t iax=0;iax<sols.at(isolution).size();iax++)
+        for (long iax=0;iax<sols.at(isolution).size();iax++)
           sols_stl.at(isolution).at(iax)=sols.at(isolution)(iax);
       }
       rosparam_utilities::setParam(m_nh,"slot_ik/"+location->m_name+"/"+group.first,sols_stl);
@@ -142,7 +142,7 @@ bool LocationManager::addLocation(LocationPtr &location)
       for (size_t isolution=0;isolution<sols.size();isolution++)
       {
         sols.at(isolution).resize(sols_stl.at(isolution).size());
-        for (size_t iax=0;iax<sols.at(isolution).size();iax++)
+        for (long iax=0;iax<sols.at(isolution).size();iax++)
           sols.at(isolution)(iax)=sols_stl.at(isolution).at(iax);
       }
     }

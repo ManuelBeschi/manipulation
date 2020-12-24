@@ -302,7 +302,7 @@ namespace pickplace
           for (size_t isolution=0;isolution<sols.size();isolution++)
           {
             sols_stl.at(isolution).resize(sols.at(isolution).size());
-            for (size_t iax=0;iax<sols.at(isolution).size();iax++)
+            for (long iax=0;iax<sols.at(isolution).size();iax++)
               sols_stl.at(isolution).at(iax)=sols.at(isolution)(iax);
           }
           rosparam_utilities::setParam(m_pnh,"slot_ik/"+place_id+"/"+group_name,sols_stl);
@@ -319,7 +319,7 @@ namespace pickplace
           for (size_t isolution=0;isolution<sols.size();isolution++)
           {
             sols.at(isolution).resize(sols_stl.at(isolution).size());
-            for (size_t iax=0;iax<sols.at(isolution).size();iax++)
+            for (long iax=0;iax<sols.at(isolution).size();iax++)
               sols.at(isolution)(iax)=sols_stl.at(isolution).at(iax);
           }
         }
@@ -346,7 +346,7 @@ namespace pickplace
           for (size_t isolution=0;isolution<approach_sols.size();isolution++)
           {
             sols_stl.at(isolution).resize(approach_sols.at(isolution).size());
-            for (size_t iax=0;iax<approach_sols.at(isolution).size();iax++)
+            for (long iax=0;iax<approach_sols.at(isolution).size();iax++)
               sols_stl.at(isolution).at(iax)=approach_sols.at(isolution)(iax);
           }
           rosparam_utilities::setParam(m_pnh,"approach_ik/"+place_id+"/"+group_name,sols_stl);
@@ -362,7 +362,7 @@ namespace pickplace
           for (size_t isolution=0;isolution<approach_sols.size();isolution++)
           {
             approach_sols.at(isolution).resize(sols_stl.at(isolution).size());
-            for (size_t iax=0;iax<approach_sols.at(isolution).size();iax++)
+            for (long iax=0;iax<approach_sols.at(isolution).size();iax++)
               approach_sols.at(isolution)(iax)=sols_stl.at(isolution).at(iax);
           }
         }
@@ -444,7 +444,6 @@ namespace pickplace
       return;
     }
     group->setStartState(*group->getCurrentState());
-    moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
 
 
     /* ===========================
@@ -701,7 +700,6 @@ namespace pickplace
         if (!planning_scene->isStateValid(state))
           continue;
 
-//        state.copyJointGroupPositions(group_name,js);
         double dist=(js-actual_configuration).norm();
         if (solutions.size()==0)
         {
