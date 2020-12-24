@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 
-#include <manipulation_utils/location.h>
+#include <manipulation_utils/location_manager.h>
 
 
 #include <ros/ros.h>
