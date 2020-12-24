@@ -754,10 +754,12 @@ namespace pickplace
 
     moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
     moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
-
+    planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+    planning_scene->getCurrentStateNonConst();
     robot_state::RobotState state = *group->getCurrentState();
     state.setJointGroupPositions(jmg,starting_jconf);
     moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
+
 
     planning_interface::MotionPlanRequest req;
     planning_interface::MotionPlanResponse res;
@@ -768,7 +770,6 @@ namespace pickplace
 
     std::vector<Eigen::VectorXd> sols=m_slot_configurations.at(group_name).at(place_id);
 
-    planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
 
     for (const Eigen::VectorXd& goal: sols)
     {
