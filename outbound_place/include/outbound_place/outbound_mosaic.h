@@ -116,7 +116,7 @@ protected:
 
 
   bool execute(const std::string& group_name,
-                                                      const moveit::planning_interface::MoveGroupInterface::Plan& plan);
+              const moveit::planning_interface::MoveGroupInterface::Plan& plan);
 
 
   bool wait(const std::string& group_name);
