@@ -57,7 +57,8 @@ public:
 };
 typedef std::shared_ptr<GraspPose> GraspPosePtr;
 
-class Object {
+class Object 
+{
 protected:
   std::string m_type;
   std::string m_id;

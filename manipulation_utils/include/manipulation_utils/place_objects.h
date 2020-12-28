@@ -1,12 +1,15 @@
 #include <skill_base.h>
 
+#include <manipulation_utils.h>
+
+#include <std_srvs/SetBool.h>
 #include <manipulation_msgs/PlaceObjectsAction.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
 
 namespace manipulation
 {
 
-  class PlaceObject: public SkillBase
+  class PlaceObjects: public SkillBase
   {
     protected:
       
@@ -37,7 +40,7 @@ namespace manipulation
                   const std::string& group_name);
 
     public:
-      PlaceObject(ros::NodeHandle m_nh,
+      PlaceObjects(ros::NodeHandle m_nh,
                   ros::NodeHandle m_pnh);
   
       bool init();
@@ -62,7 +65,7 @@ namespace manipulation
 
       bool resetCb(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res); // verificare se può servire in SkillBase
 
-      friend std::ostream& operator<<  (std::ostream& os, const OutboundMosaic& pick_objs);
+      friend std::ostream& operator<<  (std::ostream& os, const PlaceObjects& pick_objs);
 
   };
 

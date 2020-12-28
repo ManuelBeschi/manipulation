@@ -1,16 +1,26 @@
 #include <skill_base.h>
 
-#include <inbound_pick/inbound_pick.h>
+#include <manipulation_utils.h>
 
 #include <tf/transform_broadcaster.h>
 #include <tf_conversions/tf_eigen.h>
 
+#include <std_srvs/SetBool.h> 
+#include <manipulation_msgs/AddBox.h>
+#include <manipulation_msgs/AddObjects.h>
+#include <manipulation_msgs/ListOfObjects.h>
 #include <manipulation_msgs/PickObjectsAction.h>
+
 #include <control_msgs/FollowJointTrajectoryAction.h>
 
 namespace manipulation
 {
-  class PickObject: public SkillBase
+
+  typedef std::map<std::string, Eigen::Affine3d, std::less<std::string>, Eigen::aligned_allocator<std::pair<const std::string, Eigen::Affine3d>>>  PosesMap;
+  typedef std::pair<std::string,Eigen::Affine3d>  PosesPair;
+
+
+  class PickObjects: public SkillBase
   {
     protected:
       
@@ -95,22 +105,22 @@ namespace manipulation
 
 
     public:
-      PickObject( ros::NodeHandle m_nh,
-                  ros::NodeHandle m_pnh);
+      PickObjects(  ros::NodeHandle m_nh,
+                    ros::NodeHandle m_pnh);
 
       bool init();
 
-      bool addObjectCb(manipulation_msgs::AddObjects::Request& req,
-                      manipulation_msgs::AddObjects::Response& res);
+      bool addObjectCb( manipulation_msgs::AddObjects::Request& req,
+                        manipulation_msgs::AddObjects::Response& res);
 
       bool addBoxCb(manipulation_msgs::AddBox::Request& req,
                     manipulation_msgs::AddBox::Response& res);
 
-      bool listObjects(manipulation_msgs::ListOfObjects::Request& req,
-                  manipulation_msgs::ListOfObjects::Response& res);
+      bool listObjects( manipulation_msgs::ListOfObjects::Request& req,
+                        manipulation_msgs::ListOfObjects::Response& res);
 
       void pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConstPtr& goal,
-                      const std::string& group_name);
+                            const std::string& group_name);
 
       bool resetBoxesCb(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
 
