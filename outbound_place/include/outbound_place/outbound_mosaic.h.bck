@@ -108,7 +108,7 @@ protected:
   std::map<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>> m_slot_configurations;
   std::map<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>> m_approach_slot_configurations;
 
-  std::map<std::string,bool> m_slot_busy;
+  std::map<std::string,bool> m_slot_busy; // indica se lo slot è pieno o vuoto aggiungere contatore int al posto del bool
 
   bool m_init=false;
   bool ik(const std::string& group_name,

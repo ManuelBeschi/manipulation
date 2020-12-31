@@ -26,15 +26,61 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <manipulation_utils/pick_object.h>
+#include <manipulation_utils/pick_objects.h>
+
+#include <object_loader_msgs/attachObject.h>
 
 namespace manipulation
 {
-  PickObjects::PickObjects(const ros::NodeHandle& nh, const ros::NodeHandle& pnh):
-  m_nh(nh),
-  m_pnh(pnh)
-{
+  PickObjects::PickObjects( const ros::NodeHandle& nh, 
+                            const ros::NodeHandle& pnh):
+                            m_nh(nh),
+                            m_pnh(pnh),
+                            SkillBase(nh,pnh)
+  {
 
-}
+  }
+
+  bool PickObjects::init()
+  {
+    if (!SkillBase::init())
+    {
+      m_init = false;
+      return m_init;
+    }
+    
+    m_add_obj_srv = m_nh.advertiseService("add_objects",&PickObjects::addObjectCb,this);
+    m_add_box_srv = m_nh.advertiseService("add_box",&PickObjects::addBoxCb,this);
+    m_list_objects_srv = m_nh.advertiseService("list_objects",&PickObjects::listObjects,this);
+    m_reset_srv = m_nh.advertiseService("inbound/reset_box",&PickObjects::resetBoxesCb,this);
+
+    m_attach_object_srv = m_nh.serviceClient<object_loader_msgs::attachObject>("attach_object_to_link");
+
+    for (const std::string& group_name: m_group_names)
+    { 
+      //////////// To be Checked //////
+      std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> as;
+      as.reset(new actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>( m_nh,
+                                                                                        group_name+"/pick",
+                                                                                        boost::bind(&PickObjects::pickObjectGoalCb,
+                                                                                        this,
+                                                                                        _1,
+                                                                                        group_name),
+                                                                                        false));
+      m_pick_servers.insert(std::pair<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>>>(group_name,as));
+
+      std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>> fjt_ac;
+      fjt_ac.reset(new actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>("/"+group_name+"/follow_joint_trajectory",true));
+      m_fjt_clients.insert(std::pair<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>>(group_name,fjt_ac));
+      ////////////////////////////
+
+
+      m_pick_servers.at(group_name)->start();
+     
+    }
+    
+    m_init = true;
+    return m_init;
+  }
 
 }

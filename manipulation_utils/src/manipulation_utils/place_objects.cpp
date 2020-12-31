@@ -1,4 +1,3 @@
-#pragma once
 
 /*
 Copyright (c) 2019, Manuel Beschi CNR-STIIMA manuel.beschi@stiima.cnr.it
@@ -27,50 +26,40 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <manipulation_utils/place_objects.h>
 
-#include <ros/ros.h>
-
-#include <manipulation_utils.h>
-#include <rosdyn_core/primitives.h>
-
-#include <moveit_msgs/DisplayTrajectory.h>
-
-#include <moveit/kinematic_constraints/utils.h>
-#include <moveit/planning_scene/planning_scene.h>
-#include <moveit/planning_pipeline/planning_pipeline.h>
-#include <moveit/robot_model_loader/robot_model_loader.h>
-#include <moveit/kinematic_constraints/kinematic_constraint.h>
-
-
+#include <object_loader_msgs/detachObject.h>
 
 namespace manipulation
 {
-	class MoveItBase
-	{
-		protected:
-			std::string world_frame="world";
+  PlaceObjects::PlaceObjects( const ros::NodeHandle& nh, 
+                              const ros::NodeHandle& pnh):
+                              m_nh(nh),
+                              m_pnh(pnh),
+                              SkillBase(nh,pnh)
+  {
 
-			ros::Publisher m_display_publisher;
+  }
 
-			std::vector<std::string> m_group_names;
-			std::vector<std::string> m_request_adapters;
+  bool PlaceObjects::init()
+  {
+    if (!SkillBase::init())
+    {
+      m_init = false;
+      return m_init;
+    }
+    
+    m_detach_object_srv = m_nh.serviceClient<object_loader_msgs::detachObject>("detach_object_to_link");
+    m_reset_srv = m_nh.advertiseService("outbound/reset",&PlaceObjects::resetCb,this);
+     
+    for (const std::string& group_name: m_group_names)
+    {
+      m_as.at(group_name)->start();
+    }
 
-			robot_model::RobotModelPtr m_kinematic_model;
+    m_init = true;
+    return m_init;
 
-			std::map<std::string,bool> m_use_single_goal;
-			std::map<std::string,std::string> m_tool_names;
+  }
 
-			std::map<std::string,double> m_fjt_result;
-			std::map<std::string,int> m_max_ik_goal_number;
-			std::map<std::string,rosdyn::ChainPtr> m_chains; 
-
-			std::map<std::string,moveit::core::JointModelGroup*> m_joint_models;
-			std::map<std::string,moveit::planning_interface::MoveGroupInterfacePtr> m_groups;
-
-			std::map<std::string,planning_pipeline::PlanningPipelinePtr> m_planning_pipeline;
-			std::map<std::string,std::shared_ptr<planning_scene::PlanningScene>> m_planning_scene;
-
-			bool ik(const std::string& group_name,
-							const Eigen::Affine3d& T_w_a, std::vector<Eigen::VectorXd >& sols, unsigned int ntrial=N_ITER);
-	};
 }

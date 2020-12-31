@@ -19,7 +19,15 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES outbound_place
-  CATKIN_DEPENDS manipulation_msgs moveit_planning_helper roscpp rosdyn_core rosparam_utilities std_srvs object_loader_msgs tf_conversions eigen_conversions
+  CATKIN_DEPENDS  manipulation_msgs 
+                  moveit_planning_helper 
+                  roscpp 
+                  rosdyn_core 
+                  rosparam_utilities 
+                  std_srvs 
+                  object_loader_msgs 
+                  tf_conversions 
+                  eigen_conversions
   DEPENDS
 )
 

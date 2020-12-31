@@ -1,4 +1,4 @@
-string inbound_box_name
+string box_name
 manipulation_msgs/Object[] add_objects
 ---
 int8 results

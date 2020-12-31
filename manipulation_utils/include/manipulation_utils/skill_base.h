@@ -29,8 +29,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <ros/ros.h>
 
-#include <moveit_base.h>
+#include <location.h>
 
+#include <manipulation_msgs/ListOfObjects.h>
+
+#include <control_msgs/FollowJointTrajectoryGoal.h>
 #include <control_msgs/FollowJointTrajectoryResult.h>
 
 #include <actionlib/client/simple_action_client.h>
@@ -41,37 +44,59 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace manipulation
 {  
-  class SkillBase: public MoveItBase
+  class SkillBase
   {
     protected:
 
-      std::string m_name;
+      bool m_init;
+
       ros::NodeHandle m_nh;
       ros::NodeHandle m_pnh; 
 
-      ros::ServiceClient m_grasp_srv;
-      ros::ServiceClient m_attach_detach_object_srv;
-      ros::ServiceServer m_reset_srv;
-
       ros::Publisher m_target_pub;
+      ros::ServiceClient m_grasp_srv;
 
+      LocationManager m_loc_man;
 
-      virtual bool execute( const std::string& group_name,
-                            const moveit::planning_interface::MoveGroupInterface::Plan& plan) = 0;
+      std::map<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>> m_fjt_clients;
 
-      virtual bool wait(const std::string& group_name) = 0;
+      //std::map<std::string,InboundBoxPtr> searchLocationName(const std::string& location_name);
 
-      virtual void doneCb(const actionlib::SimpleClientGoalState& state,
-                          const control_msgs::FollowJointTrajectoryResultConstPtr& result,
-                          const std::string& group_name) = 0;
+      bool removeLocation(const std::string& element_name);
+
+      bool execute( const std::string& group_name,
+                    const moveit::planning_interface::MoveGroupInterface::Plan& plan);
+
+      bool wait(const std::string& group_name);
+
+      void doneCb(const actionlib::SimpleClientGoalState& state,
+                  const control_msgs::FollowJointTrajectoryResultConstPtr& result,
+                  const std::string& group_name);
 
     public:
       SkillBase(const ros::NodeHandle& nh,
-                const ros::NodeHandle& pnh,
-                const std::string& name);
+                const ros::NodeHandle& pnh);
 
       bool init();
 
+      bool addObjectsCb(manipulation_msgs::AddObjects::Request& req,
+                        manipulation_msgs::AddObjects::Response& res);
+
+      bool addBoxesCb(manipulation_msgs::AddBoxes::Request& req,
+                      manipulation_msgs::AddBoxes::Response& res);
+
+      bool addLocationsCb(manipulation_msgs::AddLocations::Request& req,
+                          manipulation_msgs::AddLocations::Response& res); // to be checked if it is necessary
+
+      bool listObjectsCb( manipulation_msgs::ListOfObjects::Request& req,
+                          manipulation_msgs::ListOfObjects::Response& res);
+
+      bool resetBoxesCb(std_srvs::SetBool::Request& req, 
+                        std_srvs::SetBool::Response& res); // to be evaluated
+                        
+      bool removeLocationsCb( manipulation_msgs::RemoveLocations::Request& req,
+                              manipulation_msgs::RemoveLocations::Response& res);
+
   };
 
-}
+} // end namespace manipulation

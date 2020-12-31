@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.0.1)
 project(manipulation_msgs)
 
 find_package(catkin REQUIRED COMPONENTS
@@ -13,14 +13,14 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files(
   FILES
+  Location.msg
   Grasp.msg
   Object.msg
-  PickBox.msg
-  Location.msg
+  Box.msg
   )
 add_service_files(
   FILES
-  AddBox.srv
+  AddBoxes.srv
   AddObjects.srv
   AddLocations.srv
   RemoveLocations.srv
@@ -36,7 +36,7 @@ add_action_files(
 
 generate_messages(
   DEPENDENCIES
-  geometry_msgs   std_msgs  actionlib_msgs geometry_msgs control_msgs sensor_msgs
+  geometry_msgs std_msgs actionlib_msgs control_msgs sensor_msgs
 )
 
 catkin_package(

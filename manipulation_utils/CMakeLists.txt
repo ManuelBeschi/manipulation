@@ -29,13 +29,13 @@ include_directories(
 
 add_library(${PROJECT_NAME}
 	    src/${PROJECT_NAME}/location.cpp
-	    src/${PROJECT_NAME}/skill_base.cpp
+	    #src/${PROJECT_NAME}/skill_base.cpp
 )
 add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 
-add_executable(        test_recipe src/test_recipe.cpp)
-add_dependencies(      test_recipe ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries( test_recipe
-   ${catkin_LIBRARIES}
-)
+#add_executable(        test_recipe src/test_recipe.cpp)
+#add_dependencies(      test_recipe ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#target_link_libraries( test_recipe
+#   ${catkin_LIBRARIES}
+#)

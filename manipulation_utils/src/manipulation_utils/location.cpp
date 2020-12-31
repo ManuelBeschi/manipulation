@@ -32,32 +32,37 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-namespace pickplace {
+namespace manipulation 
+{
 
-Location::Location(const std::string& name,
-         const Eigen::Affine3d& T_w_location,
-         const Eigen::Affine3d& T_w_approach,
-         const Eigen::Affine3d& T_w_leave):
-  m_name(name),
-  m_T_w_location(T_w_location),
-  m_T_w_approach(T_w_approach),
-  m_T_w_return(T_w_leave)
+
+// Location Class
+Location::Location( const std::string& name,
+                    const Eigen::Affine3d& T_w_location,
+                    const Eigen::Affine3d& T_w_approach,
+                    const Eigen::Affine3d& T_w_leave):
+                    m_name(name),
+                    m_T_w_location(T_w_location),
+                    m_T_w_approach(T_w_approach),
+                    m_T_w_return(T_w_leave)
 {
 
 }
 
-
 Location::Location(const manipulation_msgs::Location &msg)
 {
   tf::poseMsgToEigen(msg.pose,m_T_w_location);
+  
   Eigen::Affine3d T_location_approach;
   tf::poseMsgToEigen(msg.approach_relative_pose,T_location_approach);
-  m_T_w_approach=m_T_w_location*T_location_approach;
+  m_T_w_approach = m_T_w_location * T_location_approach;
 
   Eigen::Affine3d T_location_return;
   tf::poseMsgToEigen(msg.approach_relative_pose,T_location_return);
-  m_T_w_return=m_T_w_location*T_location_return;
-  m_name=msg.id;
+  m_T_w_return = m_T_w_location * T_location_return;
+
+  m_name = msg.name;
+  m_frame = msg.frame;
 }
 
 bool Location::canBePickedBy(const std::string &group_name)
@@ -65,121 +70,387 @@ bool Location::canBePickedBy(const std::string &group_name)
   return ( m_location_configurations.find(group_name) != m_location_configurations.end() );
 }
 
-void Location::addLocationIk(const std::string &group_name, const std::vector<Eigen::VectorXd> &solutions)
+void Location::addLocationIk( const std::string &group_name, 
+                              const std::vector<Eigen::VectorXd> &solutions )
 {
   if ( m_location_configurations.find(group_name) == m_location_configurations.end() )
     m_location_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(group_name, solutions));
   else
-    m_location_configurations.at(group_name)=solutions;
+    m_location_configurations.at(group_name) = solutions;
 }
-void Location::addApproachIk(const std::string &group_name, const std::vector<Eigen::VectorXd> &solutions)
+
+void Location::addApproachIk( const std::string &group_name, 
+                              const std::vector<Eigen::VectorXd> &solutions )
 {
   if ( m_approach_location_configurations.find(group_name) == m_approach_location_configurations.end() )
     m_approach_location_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(group_name, solutions));
   else
-    m_approach_location_configurations.at(group_name)=solutions;
+    m_approach_location_configurations.at(group_name) = solutions;
 }
+
 void Location::addReturnIk(const std::string &group_name, const std::vector<Eigen::VectorXd> &solutions)
 {
   if ( m_return_location_configurations.find(group_name) == m_return_location_configurations.end() )
     m_return_location_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(group_name, solutions));
   else
-    m_return_location_configurations.at(group_name)=solutions;
+    m_return_location_configurations.at(group_name) = solutions;
 }
 
-LocationManager::LocationManager(const std::map<std::string, std::shared_ptr<planning_scene::PlanningScene> > &planning_scene,
-                                 const std::map<std::string, moveit::planning_interface::MoveGroupInterfacePtr> &groups,
-                                 const std::map<std::string, moveit::core::JointModelGroup *> &joint_models, const ros::NodeHandle& nh):
-  m_planning_scene(planning_scene),
-  m_groups(groups),
-  m_joint_models(joint_models),
-  m_nh(nh)
+
+
+// LocationManager class
+LocationManager::LocationManager( const ros::NodeHandle& nh):
+                                  m_nh(nh),
+                                  world_frame("world")
 {
-  m_add_loc_srv=m_nh.advertiseService("add",&LocationManager::addLocationsCb,this);
-  m_remove_loc_srv=m_nh.advertiseService("remove",&LocationManager::removeLocationsCb,this);
 }
 
-bool LocationManager::addLocation(LocationPtr &location)
+bool LocationManager::init()
 {
-  if ( m_locations.find(location->m_name) != m_locations.end() )
+  robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
+  m_kinematic_model = robot_model_loader.getModel();
+
+  m_display_publisher = m_nh.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true); // verificare se il nome del messaggio può essere sposta in file di configurazione 
+
+  if (!m_nh.getParam("request_adapters", m_request_adapters))
   {
-    ROS_ERROR("Location %s is already present",location->m_name.c_str());
+    ROS_ERROR_STREAM("Could not find request_adapters in namespace " << m_nh.getNamespace());
     return false;
   }
-  bool added=false;
+
+  if (!m_nh.getParam("groups",m_tool_names))
+  {
+    ROS_ERROR("parameter %s/groups is not defined",m_nh.getNamespace().c_str());
+    if (m_nh.hasParam("groups"))
+    {
+      ROS_ERROR("parameter %s/groups is not wrong",m_nh.getNamespace().c_str());
+    }
+    return false;
+  }
+  for (const std::pair<std::string,std::string>& p: m_tool_names)
+  {
+    m_group_names.push_back(p.first);
+  }
+
+  // create groups
+  for (const std::string& group_name: m_group_names)
+  {
+    std::string planner_plugin_name;
+    if (!m_nh.getParam(group_name+"/planning_plugin", planner_plugin_name))
+    {
+      ROS_ERROR_STREAM("Could not find planner plugin name");
+      return false;
+    }
+
+    bool use_single_goal;
+    if (!m_nh.getParam(group_name+"/use_single_goal",use_single_goal))
+    {
+      ROS_INFO("parameter %s/use_single_goal is not defined, use false (multi goal enable)",m_nh.getNamespace().c_str());
+      use_single_goal=false;
+    }
+    m_use_single_goal.insert(std::pair<std::string,bool>(group_name,use_single_goal));
+
+    m_planning_scene.insert(std::pair<std::string,std::shared_ptr<planning_scene::PlanningScene>>(group_name,std::make_shared<planning_scene::PlanningScene>(m_kinematic_model)));
+    collision_detection::AllowedCollisionMatrix acm = m_planning_scene.at(group_name)->getAllowedCollisionMatrixNonConst();
+    std::vector<std::string> allowed_collisions;
+    bool use_disable_collisions;
+    if (m_nh.getParam(group_name+"/use_disable_collisions",use_disable_collisions))
+    {
+      if (!m_nh.getParam(group_name+"/disable_collisions",allowed_collisions))
+      {
+        ROS_INFO("parameter %s/%s/disable_collisions is not defined, use default",m_nh.getNamespace().c_str(),group_name.c_str());
+      }
+      else
+      {
+        for (const std::string& link: allowed_collisions)
+        {
+          ROS_INFO("Disable collision detection for group %s and link %s",group_name.c_str(),link.c_str());
+          acm.setEntry(link,true);
+        }
+      }
+    }
+    else
+    {
+      if (m_nh.getParam(group_name+"/disable_collisions",allowed_collisions))
+      {
+        ROS_WARN("in group %s/%s you set disable_collisions but not use_disable_collisions, it is ignored",m_nh.getNamespace().c_str(),group_name.c_str());
+      }
+    }
+
+    planning_pipeline::PlanningPipelinePtr planning_pipeline = std::make_shared<planning_pipeline::PlanningPipeline>(m_kinematic_model, m_nh, planner_plugin_name, m_request_adapters);
+    m_planning_pipeline.insert(std::pair<std::string,planning_pipeline::PlanningPipelinePtr>(group_name,planning_pipeline));
+
+    moveit::planning_interface::MoveGroupInterfacePtr group = std::make_shared<moveit::planning_interface::MoveGroupInterface>(group_name);
+    if (!group->startStateMonitor(3))
+    {
+      ROS_ERROR("unable to get robot state for group %s",group_name.c_str());
+      return false;
+    }
+
+    group->setStartState(*group->getCurrentState());
+    m_groups.insert(std::pair<std::string,moveit::planning_interface::MoveGroupInterfacePtr>(group_name,group));
+
+
+    moveit::core::JointModelGroup* jmg = m_kinematic_model->getJointModelGroup(group_name);
+    m_joint_models.insert(std::pair<std::string,moveit::core::JointModelGroup*>(group_name,jmg));
+
+    Eigen::Vector3d gravity;
+    gravity << 0,0,-9.806; // Muovere in file di configurazione
+    rosdyn::ChainPtr chain = rosdyn::createChain(*robot_model_loader.getURDF(),world_frame,m_tool_names.at(group_name),gravity);
+    chain->setInputJointsName(jmg->getActiveJointModelNames());
+    m_chains.insert(std::pair<std::string,rosdyn::ChainPtr>(group_name,chain));
+
+    size_t n_joints=jmg->getActiveJointModelNames().size();
+    std::vector<double> tmp;
+    if (m_nh.getParam(group_name+"/preferred_configuration",tmp))
+    {
+      assert(tmp.size()==n_joints);
+      Eigen::VectorXd preferred_position(n_joints);
+      for (size_t idof=0; idof<n_joints; idof++)
+        preferred_position(idof) = tmp.at(idof);
+
+      ROS_INFO_STREAM("preferred configuration of " << group_name<<" is " << preferred_position.transpose());
+      m_preferred_configuration.insert(std::pair<std::string,Eigen::VectorXd>(group_name,preferred_position));
+      if (m_nh.getParam(group_name+"/preferred_configuration_weight",tmp))
+      {
+        assert(tmp.size()==n_joints);
+        Eigen::VectorXd preferred_position_weight(n_joints);
+        for (size_t idof=0; idof<n_joints; idof++)
+          preferred_position_weight(idof) = tmp.at(idof);
+        ROS_INFO_STREAM("preferred configuration weight of "<<group_name<<" is " << preferred_position_weight.transpose());
+
+        m_preferred_configuration_weight.insert(std::pair<std::string,Eigen::VectorXd>(group_name,preferred_position_weight));
+      }
+      else
+      {
+        Eigen::VectorXd preferred_position_weight(n_joints,1);
+        ROS_INFO_STREAM("preferred configuration weight of " << group_name << " is " << preferred_position_weight.transpose());
+        m_preferred_configuration_weight.insert(std::pair<std::string,Eigen::VectorXd>(group_name,preferred_position_weight));
+      }
+    }
+    else
+    {
+      ROS_WARN("no preferred configuration for group %s",group_name.c_str());
+      ROS_WARN("to do it set parameters %s/%s/preferred_configuration and %s/%s/preferred_configuration_weight",m_nh.getNamespace().c_str(),group_name.c_str(),m_nh.getNamespace().c_str(),group_name.c_str());
+    }
+
+    int max_ik_goal_number;
+    if (!m_nh.getParam(group_name+"/max_ik_goal_number",max_ik_goal_number))
+    {
+      max_ik_goal_number = N_ITER;
+    }
+    m_max_ik_goal_number.insert(std::pair<std::string,int>(group_name,max_ik_goal_number));
+
+    m_fjt_result.insert(std::pair<std::string,double>(group_name,0));
+
+  }
+
+  // Evaluate if something is missing
+
+  return true;
+}
+
+bool LocationManager::addLocationFromMsg(const manipulation_msgs::Location& location)
+{
+  LocationPtr location_ptr(new Location(location));
+
+  if ( m_locations.find(location_ptr->m_name) != m_locations.end() )
+  {
+    ROS_ERROR("Location %s is already present",location_ptr->m_name.c_str());
+    return false;
+  }
+
   for (const std::pair<std::string,moveit::planning_interface::MoveGroupInterfacePtr>& group: m_groups)
   {
     std::vector<Eigen::VectorXd> sols;
     std::vector<std::vector<double>> sols_stl;
 
-
-    if (!m_nh.hasParam("slot_ik/"+location->m_name+"/"+group.first))
+    if (!m_nh.hasParam("slot_ik/"+location_ptr->m_name+"/"+group.first))
     {
-
-      if (!ik(group.first,location->m_T_w_location,sols))
+      if (!ik(group.first,location_ptr->m_T_w_location,sols))
       {
-        ROS_INFO("Location %s cannot be reached by group %s",location->m_name.c_str(),group.first.c_str());
+        ROS_INFO("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
         continue;
       }
 
       sols_stl.resize(sols.size());
-      for (size_t isolution=0;isolution<sols.size();isolution++)
+      for (size_t isolution = 0; isolution < sols.size(); isolution++)
       {
         sols_stl.at(isolution).resize(sols.at(isolution).size());
         for (size_t iax=0;iax<sols.at(isolution).size();iax++)
           sols_stl.at(isolution).at(iax)=sols.at(isolution)(iax);
       }
-      rosparam_utilities::setParam(m_nh,"slot_ik/"+location->m_name+"/"+group.first,sols_stl);
+      rosparam_utilities::setParam(m_nh,"slot_ik/"+location_ptr->m_name+"/"+group.first,sols_stl);
     }
     else
     {
-      if (!rosparam_utilities::getParamMatrix(m_nh,"slot_ik/"+location->m_name+"/"+group.first,sols_stl))
+      if (!rosparam_utilities::getParamMatrix(m_nh,"slot_ik/"+location_ptr->m_name+"/"+group.first,sols_stl))
       {
-        ROS_ERROR("parameter %s/slot_ik/%s/%s is not correct",m_nh.getNamespace().c_str(),location->m_name.c_str(),group.first.c_str());
+        ROS_ERROR("parameter %s/slot_ik/%s/%s is not correct",m_nh.getNamespace().c_str(),location_ptr->m_name.c_str(),group.first.c_str());
         return false;
       }
       sols.resize(sols_stl.size());
-      for (size_t isolution=0;isolution<sols.size();isolution++)
+      for (size_t isolution = 0; isolution < sols.size(); isolution++)
       {
         sols.at(isolution).resize(sols_stl.at(isolution).size());
-        for (size_t iax=0;iax<sols.at(isolution).size();iax++)
-          sols.at(isolution)(iax)=sols_stl.at(isolution).at(iax);
+        for (size_t iax = 0; iax < sols.at(isolution).size(); iax++)
+          sols.at(isolution)(iax) = sols_stl.at(isolution).at(iax);
       }
     }
-    location->addLocationIk(group.first,sols);
+    location_ptr->addLocationIk(group.first,sols);
 
 
-    if (!ik(group.first,location->m_T_w_approach,sols))
+    if (!ik(group.first,location_ptr->m_T_w_approach,sols))
     {
-      ROS_INFO("Location %s cannot be reached by group %s",location->m_name.c_str(),group.first.c_str());
+      ROS_INFO("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
       continue;
     }
-    location->addApproachIk(group.first,sols);
+    location_ptr->addApproachIk(group.first,sols);
 
-    if (!ik(group.first,location->m_T_w_return,sols))
+    if (!ik(group.first,location_ptr->m_T_w_return,sols))
     {
-      ROS_INFO("Location %s cannot be reached by group %s",location->m_name.c_str(),group.first.c_str());
+      ROS_INFO("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
       continue;
     }
-    location->addReturnIk(group.first,sols);
-
-    added=true;
+    location_ptr->addReturnIk(group.first,sols);
   }
-  m_locations.insert(std::pair<std::string,LocationPtr>(location->m_name,location));
-  return added;
+
+  m_locations.insert(std::pair<std::string,LocationPtr>(location_ptr->m_name,location_ptr));
+  
+  return true;
+}
+
+bool LocationManager::addLocationsFromMsg(const std::vector<manipulation_msgs::Location>& locations)
+{
+  for (const manipulation_msgs::Location& location: locations)
+  {
+    if(!addLocationFromMsg(location))
+    {
+      ROS_ERROR("Can't add the location %s",location.name.c_str());
+      return false;  
+    }
+  }
+  
+  return true;
+}
+
+bool LocationManager::removeLocation(const std::string& location_name)
+{
+  if (location_name.compare("delete_all")==0)
+  {
+    ROS_INFO("delete_all shortcut: delete all the locations in %s",m_nh.getNamespace().c_str());
+    m_locations.clear();
+    return true;
+  }
+
+  if ( m_locations.find(location_name) == m_locations.end() )
+  {
+    ROS_ERROR("Location %s is not present",location_name.c_str());
+    return false;
+  }
+  m_locations.erase(m_locations.find(location_name));
+  return true;
+}
+
+bool LocationManager::removeLocations(const std::vector<std::string>& location_names)
+{
+  for (const std::string& location_name: location_names)
+  {
+    if(!removeLocation(location_name))
+    {
+      ROS_ERROR("Can't remove the location %s",location_name.c_str());
+      return false;  
+    }
+  }
+  
+  return true;
+}
+
+moveit::planning_interface::MoveGroupInterface::Plan LocationManager::planTo( const std::string& group_name,
+                                                                              const std::vector<std::string>& location_names,
+                                                                              const Location::Destination& destination,
+                                                                              const Eigen::VectorXd& starting_jconf,
+                                                                              moveit::planning_interface::MoveItErrorCode& result,
+                                                                              Eigen::VectorXd& final_configuration)
+{
+  moveit::planning_interface::MoveGroupInterface::Plan plan;
+  moveit::planning_interface::MoveGroupInterfacePtr group = m_groups.at(group_name);
+  moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
+
+  robot_state::RobotState state = *group->getCurrentState();
+  state.setJointGroupPositions(jmg,starting_jconf);
+  moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
+
+  planning_interface::MotionPlanRequest req;
+  planning_interface::MotionPlanResponse res;
+  req.group_name = group_name;
+  req.start_state = plan.start_state_;
+  req.allowed_planning_time = 5;
+  robot_state::RobotState goal_state(m_kinematic_model);
+
+  std::vector<Eigen::VectorXd> sols;
+  for(const std::string& location_name: location_names) 
+  {
+    std::vector<Eigen::VectorXd> sols_single_location;
+    switch (destination)
+    {
+    case Location::Approach:
+      sols_single_location = m_locations.at(location_name)->getApproachIk(group_name);
+      break;
+    case Location::Slot:
+      sols_single_location = m_locations.at(location_name)->getLocationIk(group_name);
+      break;
+    case Location::Leave:
+      sols_single_location = m_locations.at(location_name)->getReturnIk(group_name);
+      break;
+    }
+    sols.insert(sols.end(),sols_single_location.begin(),sols_single_location.end());
+  }
+
+  for (const Eigen::VectorXd& goal: sols)
+  {
+    goal_state.setJointGroupPositions(jmg, goal);
+    moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
+    req.goal_constraints.push_back(joint_goal);
+  }
+  ROS_DEBUG("Found %zu solution",sols.size());
+
+  if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene.at(group_name), req, res))
+  {
+    ROS_ERROR("Could not compute plan successfully");
+    result = res.error_code_;
+    return plan;
+  }
+  plan.planning_time_ = res.planning_time_;
+
+  res.trajectory_->getRobotTrajectoryMsg(plan.trajectory_);
+  if (res.trajectory_->getWayPointCount()==0)
+  {
+    ROS_WARN("trajectory with 0 waypoint");
+  }
+  else
+    res.trajectory_->getLastWayPoint().copyJointGroupPositions(jmg,final_configuration);
+  result = res.error_code_;
+  
+  return plan;
 }
 
 bool LocationManager::ik(const std::string& group_name,
-                         const Eigen::Affine3d& T_w_a, std::vector<Eigen::VectorXd >& sols, unsigned int ntrial)
+                         const Eigen::Affine3d& T_w_a, 
+                         std::vector<Eigen::VectorXd >& sols, 
+                         unsigned int ntrial)
 {
-  moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
+  moveit::planning_interface::MoveGroupInterfacePtr group = m_groups.at(group_name);
   moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
+  
   std::map<double,Eigen::VectorXd> solutions;
   robot_state::RobotState state = *group->getCurrentState();
+  
   Eigen::VectorXd actual_configuration;
   state.copyJointGroupPositions(group_name,actual_configuration);
-  unsigned int n_seed=sols.size();
-  bool found=false;
+  
+  unsigned int n_seed = sols.size();
+  bool found = false;
 
   for (unsigned int iter=0;iter<N_MAX_ITER;iter++)
   {
@@ -248,125 +519,5 @@ bool LocationManager::ik(const std::string& group_name,
   return found;
 }
 
-//bool LocationManager::setLocationStatus(const std::string& location_name, const Location::Status& status)
-//{
-//  if ( m_locations.find(location_name) == m_locations.end() )
-//  {
-//    ROS_ERROR("Location %s is not present",location_name.c_str());
-//    return false;
-//  }
-//  m_locations.at(location_name)->m_status=status;
-//  return true;
-//}
-
-bool LocationManager::removeLocation(const std::string& location_name)
-{
-  if (location_name.compare("delete_all")==0)
-  {
-    ROS_INFO("delete_all shortcut: delete all the locations in %s",m_nh.getNamespace().c_str());
-    m_locations.clear();
-    return true;
-  }
-
-  if ( m_locations.find(location_name) == m_locations.end() )
-  {
-    ROS_ERROR("Location %s is not present",location_name.c_str());
-    return false;
-  }
-  m_locations.erase(m_locations.find(location_name));
-  return true;
-}
-
-
-
-moveit::planning_interface::MoveGroupInterface::Plan LocationManager::planTo(const std::string& group_name,
-                                                                             const std::string& location_name,
-                                                                             const Location::Destination& destination,
-                                                                             const Eigen::VectorXd& starting_jconf,
-                                                                             moveit::planning_interface::MoveItErrorCode& result,
-                                                                             Eigen::VectorXd& final_configuration)
-{
-  moveit::planning_interface::MoveGroupInterface::Plan plan;
-  moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
-  moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
-
-  robot_state::RobotState state = *group->getCurrentState();
-  state.setJointGroupPositions(jmg,starting_jconf);
-  moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
-
-  planning_interface::MotionPlanRequest req;
-  planning_interface::MotionPlanResponse res;
-  req.group_name=group_name;
-  req.start_state=plan.start_state_;
-  req.allowed_planning_time=5;
-  robot_state::RobotState goal_state(m_kinematic_model);
-
-
-  std::vector<Eigen::VectorXd> sols;
-  switch (destination)
-  {
-    case Location::Approach:
-      sols=m_locations.at(location_name)->getApproachIk(group_name);
-      break;
-    case Location::Slot:
-      sols=m_locations.at(location_name)->getLocationIk(group_name);
-      break;
-    case Location::Leave:
-      sols=m_locations.at(location_name)->getReturnIk(group_name);
-      break;
-  }
-
-  for (const Eigen::VectorXd& goal: sols)
-  {
-
-    goal_state.setJointGroupPositions(jmg, goal);
-    moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
-    req.goal_constraints.push_back(joint_goal);
-
-  }
-  ROS_DEBUG("Found %zu solution",sols.size());
-
-  if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene.at(group_name), req, res))
-  {
-    ROS_ERROR("Could not compute plan successfully");
-    result= res.error_code_;
-    return plan;
-  }
-  plan.planning_time_=res.planning_time_;
-
-  res.trajectory_->getRobotTrajectoryMsg(plan.trajectory_);
-  if (res.trajectory_->getWayPointCount()==0)
-  {
-    ROS_WARN("trajectory with 0 waypoint");
-  }
-  else
-    res.trajectory_->getLastWayPoint().copyJointGroupPositions(jmg,final_configuration);
-  result= res.error_code_;
-
-  return plan;
-}
-
-bool LocationManager::addLocationsCb(manipulation_msgs::AddLocations::Request &req, manipulation_msgs::AddLocations::Response &res)
-{
-  for (const manipulation_msgs::Location& loc_msg: req.locations)
-  {
-    LocationPtr loc=std::make_shared<Location>(loc_msg);
-    if (!addLocation(loc))
-      return false;
-  }
-  return true;
-}
-
-bool LocationManager::removeLocationsCb(manipulation_msgs::RemoveLocations::Request &req, manipulation_msgs::RemoveLocations::Request &res)
-{
-  for (const std::string& name: req.location_names)
-  {
-    if (!removeLocation(name))
-      return false;
-  }
-  return true;
-}
-
-
-}  // end namespace pickplace
+}  // end namespace manipulation
 

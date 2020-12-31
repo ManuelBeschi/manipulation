@@ -1,3 +1,4 @@
 manipulation_msgs/Location[] locations
 ---
-
+int8 results
+int8 Success=0

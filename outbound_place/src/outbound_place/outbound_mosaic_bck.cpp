@@ -256,7 +256,7 @@ namespace pickplace
       chain->setInputJointsName(jmg->getActiveJointModelNames());
       m_chains.insert(std::pair<std::string,rosdyn::ChainPtr>(group_name,chain));
 
-
+############ TO BE MOVED IN A DEDICATED METHOD
       std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>> as;
       as.reset(new actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>(m_nh,group_name+"/place",
                                                                                           boost::bind(&OutboundMosaic::placeObjectGoalCb,this,_1,group_name),
@@ -372,7 +372,7 @@ namespace pickplace
       m_slot_configurations.insert(std::pair<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>>(group_name,slot_configurations));
       m_approach_slot_configurations.insert(std::pair<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>>(group_name,approach_slot_configurations));
 
-
+############
     }
 
     m_target_pub=m_nh.advertise<geometry_msgs::PoseStamped>("target",1);

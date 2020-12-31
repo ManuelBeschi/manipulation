@@ -101,7 +101,7 @@ bool PickObjects::init()
     rosdyn::ChainPtr chain=rosdyn::createChain(*robot_model_loader.getURDF(),world_frame,m_tool_names.at(group_name),gravity);
     chain->setInputJointsName(jmg->getActiveJointModelNames());
     m_chains.insert(std::pair<std::string,rosdyn::ChainPtr>(group_name,chain));
-
+ 
     size_t n_joints=jmg->getActiveJointModelNames().size();
     std::vector<double> tmp;
     if (m_pnh.getParam(group_name+"/preferred_configuration",tmp))
@@ -206,8 +206,6 @@ bool PickObjects::addObjectCb(manipulation_msgs::AddObjects::Request& req,
       poses.insert(p);
     }
     ObjectPtr obj_ptr=createObject(obj.type,obj.id,req.inbound_box_name,poses);
-
-
   }
   res.results=manipulation_msgs::AddObjects::Response::Success;
   return true;

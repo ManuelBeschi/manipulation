@@ -1,2 +1,2 @@
-geometry_msgs/Pose pose
 string tool_name
+manipulation_msgs/Location location

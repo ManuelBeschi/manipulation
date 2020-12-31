@@ -1,4 +1,3 @@
-manipulation_msgs/Grasp[] grasping_poses
+string name
 string type
-string id
-geometry_msgs/Pose pose
+manipulation_msgs/Grasp[] grasping_location

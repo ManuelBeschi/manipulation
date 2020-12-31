@@ -15,11 +15,12 @@ namespace manipulation
       
       ros::NodeHandle m_nh;
       ros::NodeHandle m_pnh;
+      
+      ros::ServiceClient m_detach_object_srv;
+      ros::ServiceServer m_reset_srv;
 
       std::map<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>>> m_as;
-      std::map<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>> m_fjt_clients;
 
-      bool m_init=false; // può essere spostato in SkillBase
       std::map<std::string,bool> m_slot_busy; // può essere spostato in SkillBase
 
       std::map<std::string, Eigen::Affine3d, std::less<std::string>, 
@@ -30,40 +31,32 @@ namespace manipulation
       std::map<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>> m_slot_configurations; // verificare se può servire in SkillBase
       std::map<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>> m_approach_slot_configurations; // verificare se può servire in SkillBase
 
-      bool execute(const std::string& group_name,
-                          const moveit::planning_interface::MoveGroupInterface::Plan& plan);
+      
+      bool createOutboundBox(const std::string& box_name,
+                            const Eigen::Affine3d& T_w_box,
+                            const double heigth);
 
-      bool wait(const std::string& group_name);
+      std::map<std::string,InboundBoxPtr>::iterator findBox(const std::string& box_name);
 
-      void doneCb(const actionlib::SimpleClientGoalState& state,
-                  const control_msgs::FollowJointTrajectoryResultConstPtr& result,
-                  const std::string& group_name);
+      bool removeOutboundBox(const std::string& box_name);
+
+      ObjectPtr createObject(const std::string& type, const std::string& id,
+                            const std::string& box_name,
+                            const PosesMap& poses);
+
+      bool removeObject(const std::string& type,
+                        const std::string& box_name);
+
+
 
     public:
-      PlaceObjects(ros::NodeHandle m_nh,
-                  ros::NodeHandle m_pnh);
+      PlaceObjects( const ros::NodeHandle& m_nh,
+                    const ros::NodeHandle& m_pnh);
   
       bool init();
 
       void placeObjectGoalCb(const manipulation_msgs::PlaceObjectsGoalConstPtr& goal,
                               const std::string& group_name);
-
-
-      moveit::planning_interface::MoveGroupInterface::Plan planToSlot(const std::string& group_name,
-                                                                      const std::string& place_id,
-                                                                      const Eigen::VectorXd& starting_jconf,
-                                                                      moveit::planning_interface::MoveItErrorCode& result,
-                                                                      Eigen::VectorXd& slot_jconf);
-
-      moveit::planning_interface::MoveGroupInterface::Plan planToApproachSlot(const std::string& group_name,
-                                                                              const std::string& place_id,
-                                                                              const Eigen::VectorXd& starting_jconf,
-                                                                              moveit::planning_interface::MoveItErrorCode& result,
-                                                                              Eigen::VectorXd& slot_jconf);
-
-
-
-      bool resetCb(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res); // verificare se può servire in SkillBase
 
       friend std::ostream& operator<<  (std::ostream& os, const PlaceObjects& pick_objs);
 
