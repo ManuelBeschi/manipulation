@@ -29,8 +29,6 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#pragma once
-
 #include <ros/ros.h>
 
 #include <actionlib/server/simple_action_server.h>
@@ -75,7 +73,7 @@ class Location
 {
 public:
 //  enum Status { empty, full, error};
-  enum Destination { Approach, Slot, Leave};
+  enum Destination { Approach, To, Leave};
   Location(const std::string& name,
            const Eigen::Affine3d& T_w_location,
            const Eigen::Affine3d& T_w_approach,
@@ -90,6 +88,11 @@ public:
   void addReturnIk(   const std::string& group_name, const std::vector<Eigen::VectorXd>& solutions);
 
   bool canBePickedBy(const std::string& group_name);
+  
+  Eigen::Affine3d getLocation(){return m_T_w_location;}
+  Eigen::Affine3d getApproach(){return m_T_w_approach;}
+  Eigen::Affine3d getReturn  (){return m_T_w_return;}
+
   std::vector<Eigen::VectorXd> getLocationIk(const std::string& group_name){return m_location_configurations.at(group_name);}
   std::vector<Eigen::VectorXd> getApproachIk(const std::string& group_name){return m_approach_location_configurations.at(group_name);}
   std::vector<Eigen::VectorXd> getReturnIk  (const std::string& group_name){return m_return_location_configurations.at(group_name);}
@@ -117,6 +120,12 @@ public:
 
   bool init();
 
+  bool addLocationsCb(manipulation_msgs::AddLocations::Request& req,
+                      manipulation_msgs::AddLocations::Response& res);
+
+  bool removeLocationsCb( manipulation_msgs::RemoveLocations::Request& req,
+                          manipulation_msgs::RemoveLocations::Response& res);
+
   bool addLocationsFromMsg(const std::vector<manipulation_msgs::Location>& locations);
 
   bool removeLocations(const std::vector<std::string>& location_names);
@@ -126,7 +135,8 @@ public:
                                                               const Location::Destination& destination,
                                                               const Eigen::VectorXd& starting_jconf,
                                                               moveit::planning_interface::MoveItErrorCode& result,
-                                                              Eigen::VectorXd& final_configuration);
+                                                              Eigen::VectorXd& final_configuration,
+                                                              std::string& location_name );
 
 protected:
   ros::NodeHandle m_nh;
@@ -154,21 +164,26 @@ protected:
   std::map<std::string,Eigen::VectorXd> m_preferred_configuration_weight;
 
   ros::Publisher m_display_publisher;
+  ros::ServiceServer m_add_locations_srv;
+  ros::ServiceServer m_remove_locations_srv;
 
   bool addLocationFromMsg(const manipulation_msgs::Location& location);
 
   bool removeLocation(const std::string& location_name);
 
-  // bool getConfigurationForGroup(const std::string& group_name,
-  //                               const std::vector<std::string>& location_names,
-  //                               std::vector<Eigen::VectorXd>& location_configurations,
-  //                               std::vector<Eigen::VectorXd>& approach_configurations,
-  //                               std::vector<Eigen::VectorXd>& leave_configurations); // To be done
+  std::vector<Eigen::VectorXd> getIkSolForLocation( const std::string& location_name,
+                                                    const Location::Destination& destination,
+                                                    const std::string& group_name);
+
+  double computeDistanceBetweenLocations( const std::string& location_name,
+                                          const std::string& group_name,
+                                          const Location::Destination& destination,
+                                          const Eigen::VectorXd& jconf);
 
   bool ik(const std::string& group_name,
           const Eigen::Affine3d& T_w_a,
           std::vector<Eigen::VectorXd >& sols,
-          unsigned int ntrial=N_ITER);
+          unsigned int ntrial = N_ITER);
 
 };
 

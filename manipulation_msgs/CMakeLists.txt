@@ -23,9 +23,11 @@ add_service_files(
   AddBoxes.srv
   AddObjects.srv
   AddLocations.srv
-  RemoveLocations.srv
-  AddRemoveObjects.srv
   ListOfObjects.srv
+  RemoveLocations.srv
+  RemoveObjects.srv
+  RemoveBoxes.srv
+  ResetBoxes.srv
   )
 add_action_files(
   FILES

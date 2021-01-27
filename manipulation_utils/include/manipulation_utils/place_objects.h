@@ -1,6 +1,5 @@
-#include <skill_base.h>
-
-#include <manipulation_utils.h>
+#include <manipulation_utils/skill_base.h>
+#include <manipulation_utils/manipulation_utils.h>
 
 #include <std_srvs/SetBool.h>
 #include <manipulation_msgs/PlaceObjectsAction.h>
@@ -9,7 +8,7 @@
 namespace manipulation
 {
 
-  class PlaceObjects: public SkillBase
+  class PlaceObjects
   {
     protected:
       
@@ -21,7 +20,7 @@ namespace manipulation
 
       std::map<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>>> m_as;
 
-      std::map<std::string,bool> m_slot_busy; // può essere spostato in SkillBase
+      std::map<std::string,bool> m_slot_busy; 
 
       std::map<std::string, Eigen::Affine3d, std::less<std::string>, 
               Eigen::aligned_allocator<std::pair<const std::string, Eigen::Affine3d> > > m_slot_map; // verificare se può servire in SkillBase
@@ -55,6 +54,19 @@ namespace manipulation
   
       bool init();
 
+      bool addObjectsCb(manipulation_msgs::AddObjects::Request& req,
+                        manipulation_msgs::AddObjects::Response& res);
+
+      bool addBoxesCb(manipulation_msgs::AddBoxes::Request& req,
+                      manipulation_msgs::AddBoxes::Response& res);
+
+
+      bool listObjectsCb( manipulation_msgs::ListOfObjects::Request& req,
+                          manipulation_msgs::ListOfObjects::Response& res);
+
+      bool resetBoxesCb(std_srvs::SetBool::Request& req, 
+                        std_srvs::SetBool::Response& res);
+ 
       void placeObjectGoalCb(const manipulation_msgs::PlaceObjectsGoalConstPtr& goal,
                               const std::string& group_name);
 

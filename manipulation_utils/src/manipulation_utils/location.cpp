@@ -30,8 +30,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <manipulation_utils/location.h>
 
-
-
 namespace manipulation 
 {
 
@@ -103,6 +101,7 @@ LocationManager::LocationManager( const ros::NodeHandle& nh):
                                   m_nh(nh),
                                   world_frame("world")
 {
+  // nothing to do
 }
 
 bool LocationManager::init()
@@ -245,7 +244,27 @@ bool LocationManager::init()
 
   }
 
-  // Evaluate if something is missing
+  m_add_locations_srv = m_nh.advertiseService("~/add_locations",&LocationManager::addLocationsCb,this);
+  m_remove_locations_srv = m_nh.advertiseService("~/remove_locations",&LocationManager::removeLocationsCb,this);
+  
+  return true;
+}
+
+bool LocationManager::addLocationsCb( manipulation_msgs::AddLocations::Request& req,
+                                      manipulation_msgs::AddLocations::Response& res)
+{
+  if(!addLocationsFromMsg(req.locations))
+    return false;
+
+  res.results = manipulation_msgs::AddLocations::Response::Success;
+  return true;
+}
+
+bool LocationManager::removeLocationsCb(manipulation_msgs::RemoveLocations::Request& req,
+                                        manipulation_msgs::RemoveLocations::Response& res)
+{
+  if(!removeLocations(req.location_names))
+    return false;
 
   return true;
 }
@@ -371,7 +390,8 @@ moveit::planning_interface::MoveGroupInterface::Plan LocationManager::planTo( co
                                                                               const Location::Destination& destination,
                                                                               const Eigen::VectorXd& starting_jconf,
                                                                               moveit::planning_interface::MoveItErrorCode& result,
-                                                                              Eigen::VectorXd& final_configuration)
+                                                                              Eigen::VectorXd& final_configuration,
+                                                                              std::string& location_name )
 {
   moveit::planning_interface::MoveGroupInterface::Plan plan;
   moveit::planning_interface::MoveGroupInterfacePtr group = m_groups.at(group_name);
@@ -391,19 +411,7 @@ moveit::planning_interface::MoveGroupInterface::Plan LocationManager::planTo( co
   std::vector<Eigen::VectorXd> sols;
   for(const std::string& location_name: location_names) 
   {
-    std::vector<Eigen::VectorXd> sols_single_location;
-    switch (destination)
-    {
-    case Location::Approach:
-      sols_single_location = m_locations.at(location_name)->getApproachIk(group_name);
-      break;
-    case Location::Slot:
-      sols_single_location = m_locations.at(location_name)->getLocationIk(group_name);
-      break;
-    case Location::Leave:
-      sols_single_location = m_locations.at(location_name)->getReturnIk(group_name);
-      break;
-    }
+    std::vector<Eigen::VectorXd> sols_single_location = getIkSolForLocation( location_name, destination, group_name ); 
     sols.insert(sols.end(),sols_single_location.begin(),sols_single_location.end());
   }
 
@@ -431,8 +439,55 @@ moveit::planning_interface::MoveGroupInterface::Plan LocationManager::planTo( co
   else
     res.trajectory_->getLastWayPoint().copyJointGroupPositions(jmg,final_configuration);
   result = res.error_code_;
+
+  std::vector<double> min_dist;
+  for(const std::string& location_name: location_names) 
+    min_dist.push_back(computeDistanceBetweenLocations(location_name, group_name, destination, final_configuration));    
   
+  location_name = location_names.at(std::min_element(min_dist.begin(),min_dist.end()) - min_dist.begin());
   return plan;
+}
+
+std::vector<Eigen::VectorXd> LocationManager::getIkSolForLocation(const std::string& location_name,
+                                                                  const Location::Destination& destination,
+                                                                  const std::string& group_name )
+{
+  std::vector<Eigen::VectorXd> jconf_single_location;
+  switch (destination)
+  {
+  case Location::Approach:
+    jconf_single_location = m_locations.at(location_name)->getApproachIk(group_name);
+    break;
+  case Location::To:
+    jconf_single_location = m_locations.at(location_name)->getLocationIk(group_name);
+    break;
+  case Location::Leave:
+    jconf_single_location = m_locations.at(location_name)->getReturnIk(group_name);
+    break;
+  }
+
+  return jconf_single_location;
+}  
+
+double LocationManager::computeDistanceBetweenLocations(const std::string& location_name,
+                                                        const std::string& group_name,
+                                                        const Location::Destination& destination,
+                                                        const Eigen::VectorXd& jconf)
+{
+  std::vector<Eigen::VectorXd> jconfs_location_name = getIkSolForLocation(location_name, destination, group_name);
+
+  std::vector<double> jconf_dist;
+  for (const Eigen::VectorXd& jconf_single: jconfs_location_name )  
+  {
+    if (jconf_single.size() == jconf.size())
+      jconf_dist.push_back((jconf_single - jconf).lpNorm<1>());
+    else
+    {
+      ROS_ERROR("Can't compute the distance between joint configuration.");
+      return std::numeric_limits<double>::quiet_NaN();
+    }    
+  }
+  return *std::min_element(jconf_dist.begin(),jconf_dist.end()); 
 }
 
 bool LocationManager::ik(const std::string& group_name,

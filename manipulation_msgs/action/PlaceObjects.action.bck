@@ -1,6 +1,6 @@
 string object_type
-string object_name
-string[] place_names
+string object_id
+string place_id
 ---
 int8 result
 int8 Success=0

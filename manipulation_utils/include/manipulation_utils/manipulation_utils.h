@@ -26,127 +26,154 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <ros/ros.h>
-#include <Eigen/Dense>
-#include <Eigen/Geometry>
-#include <moveit_msgs/AttachedCollisionObject.h>
-#include <mutex>
-#define ROS_PROTO(...) ROS_LOG(::ros::console::levels::Debug, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
-#define ROS_PROTO_STREAM(...) ROS_LOG_STREAM(::ros::console::levels::Debug, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
+#include <manipulation_msgs/Grasp.h>
+#include <manipulation_msgs/Object.h>
+#include <manipulation_msgs/Box.h>
+
+//#define ROS_PROTO(...) ROS_LOG(::ros::console::levels::Debug, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
+//#define ROS_PROTO_STREAM(...) ROS_LOG_STREAM(::ros::console::levels::Debug, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
 
   // To be checked
 #define N_MAX_ITER 2000
 #define N_ITER 30
 #define TOLERANCE 1e-6
 
-namespace manipulation {
-
-class GraspPose
+namespace manipulation 
 {
-protected:
-  std::string m_tool_name;
-  Eigen::VectorXd m_jconf;
-  Eigen::Affine3d m_T_w_g;
-  std::vector<Eigen::VectorXd> m_approach_jconf;
-  Eigen::Affine3d m_T_w_a;
 
-public:
-  /* jconf: joint configuration to pick the object
-   */
-  GraspPose(const Eigen::VectorXd& jconf, const std::vector<Eigen::VectorXd>& approach_jconf, const std::string& tool_name, const Eigen::Affine3d& T_w_g, const Eigen::Affine3d& T_w_a);
-  std::string getToolName(){return m_tool_name;}
-  Eigen::VectorXd getConfiguration(){return m_jconf;}
-  std::vector<Eigen::VectorXd> getApproachConfiguration(){return m_approach_jconf;}
-  Eigen::Affine3d getPose(){return m_T_w_g;}
-  Eigen::Affine3d getApproachPose(){return m_T_w_g;}
-};
-typedef std::shared_ptr<GraspPose> GraspPosePtr;
-
-class Object {
-protected:
-  std::string m_type;
-  std::string m_id;
-  std::map<std::string,std::vector<GraspPosePtr>> m_grasp_poses;
-
-public:
-  Object(const std::string& type);
-
-  std::string getType(){return m_type;}
-  std::string getId(){return m_id;}
-  void setId(const std::string& id){m_id=id;}
-  void add(const std::string& group_name, const GraspPosePtr& grasp_pose);
-  std::vector<GraspPosePtr> getGraspPoses(const std::string& group_name);
-};
-
-typedef std::shared_ptr<Object> ObjectPtr;
-
-class InboundBox
-{
-protected:
-  std::map<std::string,std::vector<std::string>> m_ids_by_type;
-  std::map<std::string,ObjectPtr> m_objects;
-  std::string m_name;
-  std::map<std::string, std::vector<Eigen::VectorXd >> m_jconfs;
-  Eigen::Affine3d m_T_w_box;
-  Eigen::Affine3d m_T_w_box_a;
-  double m_height;
-  unsigned int m_id=0;
-  std::mutex m_mutex;
-
-  void assignId();
-public:
-  /* name : name of the inbound box
-   * jconfs: joint configurations of the approach pose
-   */
-  InboundBox(const std::string& name,
-             const Eigen::Affine3d T_w_box,
-             const double& height);
-
-  /* get inbound-box's name
-   */
-  std::string getName(){return m_name;}
-
-  /* add an object
-   */
-  bool addObject(const ObjectPtr& object);
-
-  /* add a list of objects
-   */
-  bool addObjects(const std::vector<ObjectPtr>& objects);
-
-  /* remove object with a specific id, return false if the object is not in the inbound box
+  /* remove a grasp location from the location manager
   */
-  bool removeObject(const std::string& object_id);
+  bool removeLocation(const std::string& location_name);
+  class Grasp
+  {
+  protected:
+    std::string m_tool_name;
+    std::string m_location_name;  // to keep trace about the location inserted in the LocationManager
 
-  /* get all the objects of this  type
-  */
-  std::vector<ObjectPtr> getObjectsByType(const std::string& object_type);
+  public:
+    /* constructor
+    */
+    Grasp(const manipulation_msgs::Grasp& grasp);
+      
+    /* destructor
+    */
+    ~Grasp();
 
-  /* get all the objects of these types
-  */
-  std::vector<ObjectPtr> getObjectsByTypes(const std::vector<std::string>& object_types);
+    /* get the tool name to grasp the object
+    */
+    std::string getToolName(){return m_tool_name;}
 
-  /* get all objects
-   */
-  std::vector<ObjectPtr> getAllObjects();
+    /* get the location name
+    */
+    std::string getLocationName(){return m_location_name;}
+
+  };
+  typedef std::shared_ptr<Grasp> GraspPtr;
+
+  class Object 
+  {
+  protected:
+    std::string m_name;
+    std::string m_type;
+
+    std::vector<GraspPtr> m_grasp;
+  
+  public:
+    /* constructor
+    */
+    Object(const manipulation_msgs::Object& object);
+
+    /* destructor
+    */
+    ~Object();
+
+    /* get the name of the object
+    */
+    std::string getName(){return m_name;}
+
+    /* get the name of the grasping location
+    */
+    std::vector<std::string> getGraspLocationNames();
+
+    /* get the grasping location 
+    */
+    manipulation::GraspPtr getGrasp(const std::string& grasp_location_name);
+
+    /* get the type of the object
+    */
+    std::string getType(){return m_type;}
+
+  };
+  typedef std::shared_ptr<Object> ObjectPtr;
+
+  class Box
+  {
+  protected:
+    std::string m_name;
+    double m_height;
+    std::string m_location_name;  // to keep trace about the location inserted in the LocationManager
+
+    std::map<std::string,ObjectPtr> m_objects;
+
+  public:
+    /* constructor
+    */
+    Box(const manipulation_msgs::Box& box);
+
+    /* destructor
+    */
+    ~Box();
+
+    /* get box's name
+    */
+    std::string getName(){return m_name;}
+
+    /* add an object
+    */
+    bool addObject(const manipulation_msgs::Object& object);
+
+    /* add an object
+    */
+    bool addObject(const manipulation::ObjectPtr& object);
+
+    /* remove all objects
+    */
+    void removeAllObjects();
+
+    /* remove object with a specific name, return false if the object is not in the box
+    */
+    bool removeObject(const std::string& object_name);
+ 
+    /* find an object with a specific name, return false if the object is not in the box
+    */
+    bool findObject(const std::string& object_name);
+
+    /* find an object by a grasping location name, return the object name correpondig to a grasping location name
+    */
+    std::string findObjectByGraspingLocation(const std::string& grasp_location_name);
+
+    /* get a specific object 
+    */
+    ObjectPtr getObject(const std::string& object_name){return m_objects.at(object_name);}
+
+    /* get all objects
+    */
+    std::vector<ObjectPtr> getAllObjects();
+
+    /* get all the objects of this type
+    */
+    std::vector<ObjectPtr> getObjectsByType(const std::string& object_type);
+
+    /* get box height
+    */
+    const double& getHeight(){return m_height;}
+
+    /* get the location name
+    */
+    std::string getLocationName(){return m_location_name;}
 
 
-  void setConfigurations(const std::string& group_name, const std::vector<Eigen::VectorXd >& sols);
-  std::vector<Eigen::VectorXd > getConfigurations(const std::string& group_name);
-
-  Eigen::Affine3d getPose(){return m_T_w_box;}
-  Eigen::Affine3d getApproachPose(){return m_T_w_box_a;}
-
-  const double& getHeight(){return m_height;}
-
-  void removeAllObjects();
-
-  friend std::ostream& operator<<  (std::ostream& os, const InboundBox& box);
-
-  std::mutex& getMutex(){return m_mutex;}
-
-};
-
-typedef std::shared_ptr<InboundBox> InboundBoxPtr;
+  };
+  typedef std::shared_ptr<Box> BoxPtr;
 
 }

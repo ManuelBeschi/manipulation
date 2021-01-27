@@ -28,6 +28,8 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <std_srvs/SetBool.h>
+
 #include <manipulation_utils/skill_base.h>
 
 namespace manipulation
@@ -37,14 +39,14 @@ namespace manipulation
                         m_nh(nh),
                         m_pnh(pnh),
                         m_init(false),
-                        m_loc_man(nh)
+                        LocationManager(nh)
   {
     // nothing to do ...
   }
 
   bool SkillBase::init()
   {
-    if (!m_loc_man.init())
+    if (!LocationManager::init())
       m_init = false;
 
     m_grasp_srv = m_nh.serviceClient<std_srvs::SetBool>("/gripper/grasp");    
@@ -52,48 +54,6 @@ namespace manipulation
 
     m_init = true;
     return m_init;
-  }
-
-  bool SkillBase::addObjectsCb( manipulation_msgs::AddObjects::Request& req,
-                                manipulation_msgs::AddObjects::Response& res)
-  {
-    
-  }
-
-  bool SkillBase::addBoxesCb( manipulation_msgs::AddBoxes::Request& req,
-                              manipulation_msgs::AddBoxes::Response& res)
-  {
-    
-  }
-
-  bool addLocationsCb(manipulation_msgs::AddLocations::Request& req,
-                      manipulation_msgs::AddLocations::Response& res)
-  { 
-    if(!m_loc_man.addLocationsFromMsg(req.locations))
-      return false;
-
-    return true;
-  } 
-
-  bool listObjectsCb( manipulation_msgs::ListOfObjects::Request& req,
-                      manipulation_msgs::ListOfObjects::Response& res)
-  {
-      
-  }
-
-  bool resetBoxesCb(std_srvs::SetBool::Request& req, 
-                    std_srvs::SetBool::Response& res) 
-  {
-    // to be evaluated
-  }
-                    
-  bool removeLocationsCb( manipulation_msgs::RemoveLocations::Request& req,
-                          manipulation_msgs::RemoveLocations::Response& res)
-  {
-    if (!m_loc_man.addLocationsFromMsg(req.location_names))
-      return false;
-
-    return true;
   }
 
   bool SkillBase::execute(const std::string& group_name,
@@ -139,12 +99,6 @@ namespace manipulation
                 group_name.c_str(),result->error_string.c_str() );
     }
     return;
-  }
-
-  bool SkillBase::listObjects(manipulation_msgs::ListOfObjects::Request& req,
-                              manipulation_msgs::ListOfObjects::Response& res)
-  {
-    
   }
 
 } // end namespace manipulation

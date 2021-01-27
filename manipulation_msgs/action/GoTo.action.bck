@@ -1,4 +1,4 @@
- string location_name
+ string location_id
 ---
 int8 result
 int8 SceneError=-1

@@ -29,10 +29,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <ros/ros.h>
 
-#include <location.h>
+#include <manipulation_utils/location.h>
 
+
+#include <manipulation_msgs/AddBoxes.h>
+#include <manipulation_msgs/AddObjects.h>
+#include <manipulation_msgs/AddLocations.h>
 #include <manipulation_msgs/ListOfObjects.h>
 
+#include <control_msgs/FollowJointTrajectoryAction.h>
 #include <control_msgs/FollowJointTrajectoryGoal.h>
 #include <control_msgs/FollowJointTrajectoryResult.h>
 
@@ -44,7 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace manipulation
 {  
-  class SkillBase
+  class SkillBase: public LocationManager
   {
     protected:
 
@@ -56,13 +61,7 @@ namespace manipulation
       ros::Publisher m_target_pub;
       ros::ServiceClient m_grasp_srv;
 
-      LocationManager m_loc_man;
-
       std::map<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>> m_fjt_clients;
-
-      //std::map<std::string,InboundBoxPtr> searchLocationName(const std::string& location_name);
-
-      bool removeLocation(const std::string& element_name);
 
       bool execute( const std::string& group_name,
                     const moveit::planning_interface::MoveGroupInterface::Plan& plan);
@@ -78,24 +77,6 @@ namespace manipulation
                 const ros::NodeHandle& pnh);
 
       bool init();
-
-      bool addObjectsCb(manipulation_msgs::AddObjects::Request& req,
-                        manipulation_msgs::AddObjects::Response& res);
-
-      bool addBoxesCb(manipulation_msgs::AddBoxes::Request& req,
-                      manipulation_msgs::AddBoxes::Response& res);
-
-      bool addLocationsCb(manipulation_msgs::AddLocations::Request& req,
-                          manipulation_msgs::AddLocations::Response& res); // to be checked if it is necessary
-
-      bool listObjectsCb( manipulation_msgs::ListOfObjects::Request& req,
-                          manipulation_msgs::ListOfObjects::Response& res);
-
-      bool resetBoxesCb(std_srvs::SetBool::Request& req, 
-                        std_srvs::SetBool::Response& res); // to be evaluated
-                        
-      bool removeLocationsCb( manipulation_msgs::RemoveLocations::Request& req,
-                              manipulation_msgs::RemoveLocations::Response& res);
 
   };
 

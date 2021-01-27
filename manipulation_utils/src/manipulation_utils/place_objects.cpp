@@ -62,4 +62,67 @@ namespace manipulation
 
   }
 
+    bool SkillBase::addObjectsCb( manipulation_msgs::AddObjects::Request& req,
+                                manipulation_msgs::AddObjects::Response& res)
+  {
+    for (const manipulation_msgs::Objects& object: req.add_objects )
+    {
+      if(!m_loc_man.addLocationsFromMsg(location))
+        return false;
+    }
+
+    // To be done handle the results
+
+    return true;
+  }
+
+  bool SkillBase::addBoxesCb( manipulation_msgs::AddBoxes::Request& req,
+                              manipulation_msgs::AddBoxes::Response& res)
+  {
+    for (const manipulation_msgs::Objects& box: req.add_boxes )
+    {
+      if(!m_loc_man.addLocationsFromMsg(box.location))
+        return false;
+    }
+ 
+    // To be done handle the results
+
+    return true;
+  }
+
+  bool addLocationsCb(manipulation_msgs::AddLocations::Request& req,
+                      manipulation_msgs::AddLocations::Response& res)
+  { 
+    for (const manipulation_msgs::Location& location: req.locations )
+    {
+      if(!m_loc_man.addLocationsFromMsg(location))
+        return false;
+    }
+
+    // To be done handle the results
+
+    return true;
+  } 
+
+  bool listObjectsCb( manipulation_msgs::ListOfObjects::Request& req,
+                      manipulation_msgs::ListOfObjects::Response& res)
+  {
+      
+  }
+
+  bool resetBoxesCb(std_srvs::SetBool::Request& req, 
+                    std_srvs::SetBool::Response& res) 
+  {
+    // to be evaluated
+  }
+                    
+  bool removeLocationsCb( manipulation_msgs::RemoveLocations::Request& req,
+                          manipulation_msgs::RemoveLocations::Response& res)
+  {
+    if (!m_loc_man.addLocationsFromMsg(req.location_names))
+      return false;
+
+    return true;
+  }
+
 }
