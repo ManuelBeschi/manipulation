@@ -1,8 +1,10 @@
 string object_type
 string object_id
-string place_id
+string[] place_id
 ---
 int8 result
+string place_id
+
 int8 Success=0
 int8 NotInitialized=-1
 int8 Full=-2

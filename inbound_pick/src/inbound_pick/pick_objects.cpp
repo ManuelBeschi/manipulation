@@ -30,7 +30,11 @@ bool PickObjects::init()
     m_group_names.push_back(p.first);
   }
 
-
+  if (!m_pnh.getParam("ik_sol_number",m_ik_sol_number))
+  {
+    ROS_ERROR("parameter %s/ik_sol_number is not defined, use 200",m_pnh.getNamespace().c_str());
+    m_ik_sol_number=200;
+  }
 
 
   // create groups
@@ -204,10 +208,10 @@ bool PickObjects::addObjectCb(manipulation_msgs::AddObjects::Request& req,
       tf::poseMsgToEigen(g.pose,T);
       PosesPair p(g.tool_name,T);
       poses.insert(p);
+      ROS_FATAL("poses=%zu",poses.size());
     }
+    ROS_FATAL("poses=%zu",poses.size());
     ObjectPtr obj_ptr=createObject(obj.type,obj.id,req.inbound_box_name,poses);
-
-
   }
   res.results=manipulation_msgs::AddObjects::Response::Success;
   return true;
@@ -265,48 +269,49 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToApproach
 
 
   std::vector<Eigen::VectorXd> sols=selected_grasp_pose->getApproachConfiguration();
-  //  for (const GraspPosePtr& grasp_pose: selected_object->getGraspPoses(group_name))
-  //  {
-  //    if (!grasp_pose->getToolName().compare(tool_name))
-  //    {
-  //      goal_state.setJointGroupPositions(jmg, grasp_pose->getConfiguration());
-  //      goal_state.updateCollisionBodyTransforms();
-  //      if (!m_planning_scene.at(group_name)->isStateValid(goal_state))
-  //        continue;
-  //      moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
-  //      req.goal_constraints.push_back(joint_goal);
-  //      if (ik_goal++>=max_ik_goal_number)
-  //        break;
 
-  //    }
-  //  }
-
-  if (!ik(group_name,approach_pose,sols))
+  if (!ik(group_name,approach_pose,sols,m_ik_sol_number))
   {
     ROS_ERROR("No Ik solution for approach");
     result=moveit::planning_interface::MoveItErrorCode::GOAL_IN_COLLISION;
     return plan;
   }
 
+  m_scene_mtx.lock();
   planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+  m_scene_mtx.unlock();
+
+  std::map<double,Eigen::VectorXd> solutions;
 
   for (const Eigen::VectorXd& goal: sols)
   {
-    if (req.goal_constraints.size()>=max_ik_goal_number)
-      break;
     goal_state.setJointGroupPositions(jmg, goal);
     goal_state.updateCollisionBodyTransforms();
-    if (!planning_scene->isStateValid(goal_state))
+    if (!planning_scene->isStateValid(goal_state,group_name))
     {
       continue;
     }
-    moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
-    req.goal_constraints.push_back(joint_goal);
+
+    double normsol=(goal-starting_jconf).norm();
+    solutions.insert(std::pair<double,Eigen::VectorXd>(normsol,goal));
+
     if (m_use_single_goal.at(group_name))
       break;
-
   }
-  ROS_DEBUG("Found %zu solutions for approach slots",sols.size());
+//  for (const std::pair<double,Eigen::VectorXd>& p: solutions)
+//  {
+//    if (req.goal_constraints.size()>=max_ik_goal_number)
+//      break;
+//    goal_state.setJointGroupPositions(jmg, p.second);
+//    moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
+//    req.goal_constraints.push_back(joint_goal);
+//  }
+
+  goal_state.setJointGroupPositions(jmg, slot_jconf);
+  moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
+  req.goal_constraints.push_back(joint_goal);
+
+  ROS_DEBUG("Found %zu solutions for approach slots",req.goal_constraints.size());
   if (req.goal_constraints.size()==0)
   {
     ROS_ERROR("Inbound server: no valid goals");
@@ -571,7 +576,7 @@ bool PickObjects::createInboundBox(const std::string& box_name, const Eigen::Aff
     if (!m_pnh.hasParam("box_ik/"+box_name+"/"+group_name))
     {
 
-      if (!ik(group_name,T_w_box,sols))
+      if (!ik(group_name,T_w_box,sols,m_ik_sol_number))
       {
         ROS_WARN("found %zu ik solutions of pose of %s for group %s",sols.size(),box_name.c_str(),group_name.c_str());
         sols.clear();
@@ -668,7 +673,11 @@ ObjectPtr PickObjects::createObject(const std::string& type,
   m_mtx.unlock();
   for (const std::string& group_name: m_group_names)
   {
-    ROS_INFO("adding object %s to box %s for group %s",obj->getType().c_str(),box->getName().c_str(),group_name.c_str());
+    ROS_INFO("adding object %s to box %s for group %s, poses=%zu",
+             obj->getType().c_str(),
+             box->getName().c_str(),
+             group_name.c_str(),
+             poses.size());
     for (const auto& pose : poses)
     {
       if (m_tool_names.at(group_name).compare(pose.first))
@@ -697,7 +706,6 @@ ObjectPtr PickObjects::createObject(const std::string& type,
       {
         for (const Eigen::VectorXd sol: sols)
         {
-
           GraspPosePtr grasp_pose=std::make_shared<GraspPose>(sol,approach_sols,pose.first,pose.second,T_w_approach);
           obj->add(group_name,grasp_pose);
         }
@@ -758,8 +766,9 @@ bool PickObjects::ik(const std::string& group_name, Eigen::Affine3d T_w_a, std::
   moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
   robot_state::RobotState state = *group->getCurrentState();
 
+  m_scene_mtx.lock();
   planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
-
+  m_scene_mtx.unlock();
 
   Eigen::VectorXd preferred_configuration(jmg->getActiveJointModels().size());
   Eigen::VectorXd preferred_configuration_weight(jmg->getActiveJointModels().size(),1);
@@ -815,17 +824,24 @@ bool PickObjects::ik(const std::string& group_name, Eigen::Affine3d T_w_a, std::
       ros::WallTime cc0=ros::WallTime::now();
       cc_iters++;
       state.updateCollisionBodyTransforms();
-      if (!planning_scene->isStateValid(state))
+      if (!planning_scene->isStateValid(state,group_name))
       {
         cc_time+=(ros::WallTime::now()-cc0);
         continue;
       }
       cc_time+=(ros::WallTime::now()-cc0);
 
-      double dist=(preferred_configuration_weight.cwiseProduct(js-preferred_configuration)).norm();
       if (solutions.size()==0)
       {
-        solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
+        std::vector<Eigen::VectorXd> multiturn=m_chains.at(group_name)->getMultiplicity(js);
+        for (const Eigen::VectorXd& tmp: multiturn)
+        {
+          state.setJointGroupPositions(group_name,tmp);
+          if (!state.satisfiesBounds())
+            continue;
+          double dist=(preferred_configuration_weight.cwiseProduct(tmp-preferred_configuration)).norm();
+          solutions.insert(std::pair<double,Eigen::VectorXd>(dist,tmp));
+        }
         found=true;
       }
       else
@@ -841,8 +857,17 @@ bool PickObjects::ik(const std::string& group_name, Eigen::Affine3d T_w_a, std::
         }
         if (is_diff)
         {
-          solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
+          std::vector<Eigen::VectorXd> multiturn=m_chains.at(group_name)->getMultiplicity(js);
+          for (const Eigen::VectorXd& tmp: multiturn)
+          {
+            state.setJointGroupPositions(group_name,tmp);
+            if (!state.satisfiesBounds())
+              continue;
+            double dist=(preferred_configuration_weight.cwiseProduct(tmp-preferred_configuration)).norm();
+            solutions.insert(std::pair<double,Eigen::VectorXd>(dist,tmp));
+          }
           found=true;
+
         }
       }
     }
@@ -859,8 +884,8 @@ bool PickObjects::ik(const std::string& group_name, Eigen::Affine3d T_w_a, std::
     sols.push_back(sol.second);
   }
 
-//  ROS_WARN("ik time = %f [ms], iterations=%u, single iteration= %f [ms]",ik_time.toSec()*1e3,ik_iters,ik_time.toSec()*1e3/ik_iters);
-//  ROS_WARN("cc time = %f [ms], iterations=%u, single iteration= %f [ms]",cc_time.toSec()*1e3,cc_iters,cc_time.toSec()*1e3/cc_iters);
+  //  ROS_WARN("ik time = %f [ms], iterations=%u, single iteration= %f [ms]",ik_time.toSec()*1e3,ik_iters,ik_time.toSec()*1e3/ik_iters);
+  //  ROS_WARN("cc time = %f [ms], iterations=%u, single iteration= %f [ms]",cc_time.toSec()*1e3,cc_iters,cc_time.toSec()*1e3/cc_iters);
   return found;
 }
 
@@ -883,7 +908,8 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
 
   robot_state::RobotState state = *group->getCurrentState();
   int max_ik_goal_number=m_max_ik_goal_number.at(group_name);
-  //  m_planning_scene->getCurrentState()
+  Eigen::VectorXd starting_jconf;
+  state.copyJointGroupPositions(group_name,starting_jconf);
 
   moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
 
@@ -898,12 +924,16 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
 
   robot_state::RobotState goal_state(m_kinematic_model);
 
+  m_scene_mtx.lock();
   planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+  m_scene_mtx.unlock();
 
   if (m_use_single_goal.at(group_name))
     ROS_INFO_THROTTLE(5,"%s: Single goal planning",group_name.c_str());
   else
     ROS_INFO_THROTTLE(5,"%s: Multi goal planning",group_name.c_str());
+
+  std::map<double,Eigen::VectorXd> solutions;
 
   for (const std::pair<std::string,InboundBoxPtr>& box: possible_boxes)
   {
@@ -916,21 +946,30 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToBestBox(
         break;
       goal_state.setJointGroupPositions(jmg, goal);
       goal_state.updateCollisionBodyTransforms();
-      if (!planning_scene->isStateValid(goal_state))
+      if (!planning_scene->isStateValid(goal_state,group_name))
       {
         continue;
       }
-
-      moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
-      req.goal_constraints.push_back(joint_goal);
+      double normsol=(goal-starting_jconf).norm();
+      solutions.insert(std::pair<double,Eigen::VectorXd>(normsol,goal));
       if (m_use_single_goal.at(group_name))
         break;
     }
-    if (req.goal_constraints.size()>0 && m_use_single_goal.at(group_name))
+    if (solutions.size()>0 && m_use_single_goal.at(group_name))
     {
       break;
     }
   }
+
+  for (const std::pair<double,Eigen::VectorXd>& p: solutions)
+  {
+    if (req.goal_constraints.size()>=max_ik_goal_number)
+      break;
+    goal_state.setJointGroupPositions(jmg, p.second);
+    moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
+    req.goal_constraints.push_back(joint_goal);
+  }
+
   if (req.goal_constraints.size()==0)
   {
     ROS_ERROR("Inbound server: no valid goals");
@@ -1024,36 +1063,47 @@ moveit::planning_interface::MoveGroupInterface::Plan PickObjects::planToObject(c
   req.allowed_planning_time=5;
   robot_state::RobotState goal_state(m_kinematic_model);
 
+  m_scene_mtx.lock();
   planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+  m_scene_mtx.unlock();
+
+  std::map<double,Eigen::VectorXd> solutions;
 
   for (const ObjectPtr& obj: objects)
   {
-    int ik_goal=0;
     for (const GraspPosePtr& grasp_pose: obj->getGraspPoses(group_name))
     {
       if (!grasp_pose->getToolName().compare(tool_name))
       {
         goal_state.setJointGroupPositions(jmg, grasp_pose->getConfiguration());
         goal_state.updateCollisionBodyTransforms();
-        if (!planning_scene->isStateValid(goal_state))
+        if (!planning_scene->isStateValid(goal_state,group_name))
         {
           continue;
         }
 
+        double normsol=( grasp_pose->getConfiguration()-starting_jconf).norm();
+        solutions.insert(std::pair<double,Eigen::VectorXd>(normsol, grasp_pose->getConfiguration()));
 
-        moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
-        req.goal_constraints.push_back(joint_goal);
-        if (ik_goal++>=max_ik_goal_number)
-          break;
         if (m_use_single_goal.at(group_name))
           break;
       }
     }
-    if (req.goal_constraints.size()>0 && m_use_single_goal.at(group_name))
+    if (solutions.size()>0 && m_use_single_goal.at(group_name))
     {
       break;
     }
   }
+
+  for (const std::pair<double,Eigen::VectorXd>& p: solutions)
+  {
+    if (req.goal_constraints.size()>=max_ik_goal_number)
+      break;
+    goal_state.setJointGroupPositions(jmg, p.second);
+    moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
+    req.goal_constraints.push_back(joint_goal);
+  }
+
   if (req.goal_constraints.size()==0)
   {
     ROS_ERROR("Inbound server: no valid goals");
@@ -1165,4 +1215,14 @@ void PickObjects::publishTF()
   }
 }
 
+void PickObjects::updatePlanningScene(const moveit_msgs::PlanningScene& scene)
+{
+  m_scene_mtx.lock();
+  for (const std::string& group: m_group_names)
+  {
+    if (!m_planning_scene.at(group)->setPlanningSceneMsg(scene))
+      ROS_ERROR("unable to update planning scene");
+  }
+  m_scene_mtx.unlock();
+}
 }

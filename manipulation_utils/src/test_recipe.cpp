@@ -35,7 +35,7 @@ int main(int argc, char **argv)
   goto_ac.waitForServer();
   ROS_INFO("Connection ok");
 
-  std::vector<std::pair<std::string,std::string>> recipe;
+  std::vector<std::pair<std::string,std::vector<std::string>>> recipe;
   XmlRpc::XmlRpcValue param;
   if (!pnh.getParam("recipe",param))
   {
@@ -50,30 +50,45 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  for(size_t i=0; i < param.size(); i++)
+  for(int i=0; i < param.size(); i++)
   {
     XmlRpc::XmlRpcValue object = param[i];
     if( object.getType() != XmlRpc::XmlRpcValue::TypeStruct)
     {
-      ROS_WARN("The element #%zu is not a struct", i);
+      ROS_WARN("The element #%d is not a struct", i);
       continue;
     }
     if( !object.hasMember("action") )
     {
-      ROS_WARN("The element #%zu has not the field 'type'", i);
+      ROS_WARN("The element #%d has not the field 'type'", i);
       continue;
     }
     std::string action=rosparam_utilities::toString(object["action"]);
 
     if( !object.hasMember("description") )
     {
-      ROS_WARN("The element #%zu has not the field 'frame'", i);
+      ROS_WARN("The element #%d has not the field 'frame'", i);
       continue;
     }
-    std::string description=rosparam_utilities::toString(object["description"]);
-    ROS_INFO("Add skill -> %s:%s",action.c_str(),description.c_str());
+    if( object.getType() != XmlRpc::XmlRpcValue::TypeStruct)
+    {
+      ROS_WARN("The element #%d is not a struct", i);
+      continue;
+    }
+    XmlRpc::XmlRpcValue description=object["description"];
+    if (param.getType() != XmlRpc::XmlRpcValue::TypeArray)
+    {
+      ROS_ERROR("description is not a list" );
+      continue;
+    }
 
-    recipe.push_back(std::pair<std::string,std::string>(action,description));
+    std::vector<std::string> descr;
+    for(int id=0; id < description.size(); id++)
+    {
+      descr.push_back(rosparam_utilities::toString(description[id]));
+      ROS_INFO("Add skill -> %s:%s",action.c_str(),descr.back().c_str());
+    }
+    recipe.push_back(std::pair<std::string,std::vector<std::string>>(action,descr));
   }
 
 
@@ -81,32 +96,32 @@ int main(int argc, char **argv)
   manipulation_msgs::PickObjectsGoal pick_goal;
   manipulation_msgs::GoToGoal goto_goal;
 
-  for (const std::pair<std::string,std::string>& skill: recipe)
+  for (const std::pair<std::string,std::vector<std::string>>& skill: recipe)
   {
-    ROS_INFO("skill -> %s:%s",skill.first.c_str(),skill.second.c_str());
+
+    ROS_INFO("[Group %s] skill -> %s:",pnh.getNamespace().c_str(),skill.first.c_str());
+    for (const std::string& s: skill.second)
+      ROS_INFO("[Group %s] \t\t\t: %s",pnh.getNamespace().c_str(),s.c_str());
 
     if (skill.first.compare("pick")==0)
     {
-      ROS_INFO("[Group %s] Goal: pick object %s",pnh.getNamespace().c_str(),skill.second.c_str());
-
-      pick_goal.object_types.push_back(skill.second);
+      pick_goal.object_types=skill.second;
 
       pick_ac.sendGoalAndWait(pick_goal);
 
 
       if (pick_ac.getResult()->result<0)
       {
-        ROS_ERROR("[Group %s] unable to pick -> object type =%s",pnh.getNamespace().c_str(),skill.second.c_str());
+        ROS_ERROR("[Group %s] unable to pick",pnh.getNamespace().c_str());
         return 0;
       }
-      ROS_INFO("[Group %s] well done! I picked it, id=%s",pnh.getNamespace().c_str(),pick_ac.getResult()->object_id.c_str());
+      ROS_INFO("[Group %s] well done! I picked it, id=%s tye=%s",pnh.getNamespace().c_str(),pick_ac.getResult()->object_id.c_str(),pick_ac.getResult()->object_type.c_str());
       place_goal.object_type=pick_ac.getResult()->object_type;
       place_goal.object_id=pick_ac.getResult()->object_id;
 
     }
     else if (skill.first.compare("place")==0)
     {
-      ROS_INFO("[Group %s] Goal: place object %s in %s",pnh.getNamespace().c_str(),place_goal.object_type.c_str(),skill.second.c_str());
       place_goal.place_id=skill.second;
       place_ac.sendGoalAndWait(place_goal);
 
@@ -115,14 +130,11 @@ int main(int argc, char **argv)
         ROS_ERROR("[Group %s] unable to place, stop it",pnh.getNamespace().c_str());
         return 0;
       }
-      ROS_INFO("[Group %s] well done! ",pnh.getNamespace().c_str());
-
+      ROS_INFO("[Group %s] well done! placed in %s",pnh.getNamespace().c_str(),place_ac.getResult()->place_id.c_str());
     }
     else if (skill.first.compare("goto")==0)
     {
-      ROS_INFO("[Group %s] Goal: Go to %s",pnh.getNamespace().c_str(),skill.second.c_str());
-
-      goto_goal.location_id=skill.second;
+      goto_goal.location_id=skill.second.at(0);
       goto_ac.sendGoalAndWait(goto_goal);
 
       if (goto_ac.getResult()->result<0)
@@ -134,7 +146,7 @@ int main(int argc, char **argv)
     }
     else
     {
-      ROS_ERROR("unable to execute action %s:%s",skill.first.c_str(),skill.second.c_str());
+      ROS_ERROR("unable to execute action %s",skill.first.c_str());
       return 0;
     }
 

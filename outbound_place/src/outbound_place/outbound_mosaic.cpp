@@ -55,6 +55,7 @@ namespace pickplace
 
 
 
+
     if (!m_pnh.getParam("groups",m_tool_names))
     {
       ROS_ERROR("parameter %s/groups is not defined",m_pnh.getNamespace().c_str());
@@ -97,6 +98,18 @@ namespace pickplace
     {
       ROS_ERROR("parameter %s/slots is not defined",m_pnh.getNamespace().c_str());
       return false;
+    }
+
+
+    if (!m_pnh.getParam("ik_sol_number",ik_sol_number))
+    {
+      ROS_ERROR("parameter %s/ik_sol_number is not defined, use 200",m_pnh.getNamespace().c_str());
+      ik_sol_number=200;
+    }
+    if (!m_pnh.getParam("finite_slot",m_finite_slot))
+    {
+      ROS_INFO("parameter %s/finite_slot is not defined, set true",m_pnh.getNamespace().c_str());
+      m_finite_slot=true;
     }
 
     if (slots_config.getType() != XmlRpc::XmlRpcValue::TypeArray)
@@ -226,6 +239,14 @@ namespace pickplace
         return false;
       }
 
+      int max_ik_goal_number;
+      if (!m_pnh.getParam(group_name+"/max_ik_goal_number",max_ik_goal_number))
+      {
+        max_ik_goal_number=N_ITER;
+      }
+      m_max_ik_goal_number.insert(std::pair<std::string,int>(group_name,max_ik_goal_number));
+
+
       bool use_single_goal;
       if (!m_pnh.getParam(group_name+"/use_single_goal",use_single_goal))
       {
@@ -288,7 +309,7 @@ namespace pickplace
         if (!m_pnh.hasParam("slot_ik/"+place_id+"/"+group_name))
         {
           // first, search solutions for the final destination
-          if (!ik(group_name,T_w_s,sols))
+          if (!ik(group_name,T_w_s,sols,ik_sol_number))
           {
             ROS_WARN("No Ik solution for the slot %s",place_id.c_str());
             sols.clear();
@@ -378,6 +399,7 @@ namespace pickplace
     m_target_pub=m_nh.advertise<geometry_msgs::PoseStamped>("target",1);
     m_grasp_srv=m_nh.serviceClient<std_srvs::SetBool>("/gripper/grasp");
     m_detach_object_srv=m_nh.serviceClient<object_loader_msgs::detachObject>("detach_object_to_link");
+    m_remove_object_srv=m_nh.serviceClient<object_loader_msgs::removeObjects>("remove_object_from_scene");
     m_reset_srv=m_nh.advertiseService("outbound/reset",&OutboundMosaic::resetCb,this);
     ROS_WARN("====================================================== RESET ==================================");
     m_init=true;
@@ -394,10 +416,11 @@ namespace pickplace
                                          const std::string& group_name)
   {
     ros::Time t0=ros::Time::now();
+
     std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>> as=m_as.at(group_name);
 
     manipulation_msgs::PlaceObjectsResult action_res;
-    std::string place_id=goal->place_id;
+    std::vector<std::string> tmp_place_ids=goal->place_id;
     moveit::planning_interface::MoveItErrorCode result;
 
 
@@ -410,29 +433,38 @@ namespace pickplace
       return;
     }
 
-    if (m_slot_map.find(place_id)==m_slot_map.end())
+    std::vector<std::string> place_ids;
+    for (const std::string& place_id: tmp_place_ids)
     {
-      ROS_ERROR("slot %s is not managed by the outbound_mosaic",place_id.c_str());
-      action_res.result=manipulation_msgs::PlaceObjectsResult::NotInitialized;
-      as->setAborted(action_res,"slot not managed");
-      return;
+      if (m_slot_map.find(place_id)==m_slot_map.end())
+      {
+        ROS_ERROR("slot %s is not managed by the outbound_mosaic",place_id.c_str());
+        action_res.result=manipulation_msgs::PlaceObjectsResult::NotInitialized;
+        as->setAborted(action_res,"slot not managed");
+        return;
+      }
+      if (m_slot_busy.find(place_id)==m_slot_busy.end())
+      {
+        ROS_DEBUG("slot %s is not managed by the outbound_mosaic",place_id.c_str());
+        action_res.result=manipulation_msgs::PlaceObjectsResult::NotInitialized;
+        as->setAborted(action_res,"slot not managed");
+        return;
+      }
+      if (m_slot_busy.at(place_id))
+      {
+        continue;
+      }
+      place_ids.push_back(place_id);
     }
-    if (m_slot_busy.find(place_id)==m_slot_busy.end())
+
+    if (place_ids.size()==0)
     {
-      ROS_ERROR("slot %s is not managed by the outbound_mosaic",place_id.c_str());
-      action_res.result=manipulation_msgs::PlaceObjectsResult::NotInitialized;
-      as->setAborted(action_res,"slot not managed");
+      action_res.result=manipulation_msgs::PlaceObjectsResult::Full;
+      ROS_ERROR("error in plan for placing slot, code = %d",result.val);
+      as->setAborted(action_res,"error in planning for placing");
       return;
     }
 
-    if (m_slot_busy.at(place_id))
-    {
-      action_res.result=manipulation_msgs::PlaceObjectsResult::Full;
-      ROS_ERROR("slot %s is already used",place_id.c_str());
-      as->setAborted(action_res,"slot is already used");
-      return;
-    }
-    m_slot_busy.at(place_id)=true;
 
     moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
     if (!group->startStateMonitor(2))
@@ -440,7 +472,6 @@ namespace pickplace
       ROS_ERROR("%s: nable to get actual state",m_pnh.getNamespace().c_str());
       action_res.result=manipulation_msgs::PlaceObjectsResult::SceneError;
       as->setAborted(action_res,"unable to get actual state");
-      m_slot_busy.at(place_id)=false;
       return;
     }
     group->setStartState(*group->getCurrentState());
@@ -449,29 +480,24 @@ namespace pickplace
     /* ===========================
      * Moving to approach position
      * ===========================*/
-    Eigen::Affine3d T_w_as; // world <- approach to slot
-    Eigen::Affine3d T_w_s; // world <- slot
-    T_w_s=m_slot_map.at(place_id);
-    T_w_as=m_approach_slot_map.at(place_id);
-
-
     geometry_msgs::PoseStamped target;
     target.header.frame_id="world";
     target.header.stamp=ros::Time::now();
 
-    ROS_PROTO("plannig to approach");
+    ROS_PROTO("planning to approach");
 
     Eigen::VectorXd actual_jconf;
     group->getCurrentState()->copyJointGroupPositions(group_name,actual_jconf);
     Eigen::VectorXd approach_slot_jconf;
     ros::Time t_approach_plan_init=ros::Time::now();
+    std::string selected_id;
 
     moveit::planning_interface::MoveGroupInterface::Plan approac_pick_plan=planToApproachSlot(group_name,
-                                                                                              place_id,
+                                                                                              place_ids,
                                                                                               actual_jconf,
                                                                                               result,
-                                                                                              approach_slot_jconf);
-
+                                                                                              approach_slot_jconf,
+                                                                                              selected_id);
 
     ros::Time t_approach_plan=ros::Time::now();
     ROS_DEBUG("plan  approach movement in %f second",(t_approach_plan-t0).toSec());
@@ -480,13 +506,17 @@ namespace pickplace
       action_res.result=manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
       ROS_ERROR("error in plan for placing slot, code = %d",result.val);
       as->setAborted(action_res,"error in planning for placing");
-      m_slot_busy.at(place_id)=false;
       return;
     }
     action_res.planning_duration+=t_approach_plan-t_approach_plan_init;
     action_res.expected_execution_duration+=approac_pick_plan.trajectory_.joint_trajectory.points.back().time_from_start;
     action_res.path_length+=trajectory_processing::computeTrajectoryLength(approac_pick_plan.trajectory_.joint_trajectory);
 
+    action_res.place_id=selected_id;
+    Eigen::Affine3d T_w_as; // world <- approach to slot
+    Eigen::Affine3d T_w_s; // world <- slot
+    T_w_s=m_slot_map.at(selected_id);
+    T_w_as=m_approach_slot_map.at(selected_id);
 
     tf::poseEigenToMsg(T_w_as,target.pose);
     m_target_pub.publish(target);
@@ -508,7 +538,7 @@ namespace pickplace
     Eigen::VectorXd slot_jconf;
     ros::Time t_pick_plan_init=ros::Time::now();
     moveit::planning_interface::MoveGroupInterface::Plan plan_plan=planToSlot(group_name,
-                                                                              place_id,
+                                                                              selected_id,
                                                                               approach_slot_jconf,
                                                                               result,
                                                                               slot_jconf);
@@ -518,9 +548,9 @@ namespace pickplace
       action_res.result=manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
       ROS_ERROR("error in plan for placing slot, code = %d",result.val);
       as->setAborted(action_res,"error in planning for placing");
-      m_slot_busy.at(place_id)=false;
       return;
     }
+    m_slot_busy.at(selected_id)=m_finite_slot;
     ros::Time t_pick_plan=ros::Time::now();
     action_res.planning_duration+=t_pick_plan-t_pick_plan_init;
     action_res.expected_execution_duration+=plan_plan.trajectory_.joint_trajectory.points.back().time_from_start;
@@ -533,11 +563,12 @@ namespace pickplace
       action_res.result=manipulation_msgs::PlaceObjectsResult::TrajectoryError;
       ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
       as->setAborted(action_res,"error in trajectory execution");
-      m_slot_busy.at(place_id)=false;
+      m_slot_busy.at(selected_id)=false;
       return;
     }
     ros::Time t_approach_wait=ros::Time::now();
     ROS_DEBUG("wait for approach movement finish in %f second",(t_approach_wait-t_pick_plan).toSec());
+
 
 
     tf::poseEigenToMsg(T_w_s,target.pose);
@@ -555,7 +586,7 @@ namespace pickplace
       action_res.result=manipulation_msgs::PlaceObjectsResult::TrajectoryError;
       ROS_ERROR("error executing %s/follow_joint_trajectory",group_name.c_str());
       as->setAborted(action_res,"error in trajectory execution");
-      m_slot_busy.at(place_id)=false;
+      m_slot_busy.at(selected_id)=false;
       return;
     }
     ros::Time t_pick_wait=ros::Time::now();
@@ -567,6 +598,7 @@ namespace pickplace
      * ===========================*/
     ros::Time t_release_obj_init=ros::Time::now();
     ros::Duration(0.5).sleep();
+
 
     object_loader_msgs::detachObject detach_srv;
     detach_srv.request.obj_id=goal->object_id;
@@ -582,11 +614,34 @@ namespace pickplace
       action_res.result=manipulation_msgs::PlaceObjectsResult::SceneError;
       ROS_ERROR("unable to detach object id %s",goal->object_id.c_str());
       as->setAborted(action_res,"unable to attach object");
-      m_slot_busy.at(place_id)=false;
+      m_slot_busy.at(selected_id)=false;
       return;
     }
-
     ROS_PROTO("detached collision object %s ",detach_srv.request.obj_id.c_str());
+
+    if (!m_finite_slot)
+    {
+      object_loader_msgs::removeObjects remove_srv;
+      remove_srv.request.obj_ids.push_back(goal->object_id);
+      ROS_INFO("REMOVE %s",goal->object_id.c_str());
+      if (!m_remove_object_srv.call(remove_srv))
+      {
+        action_res.result=manipulation_msgs::PlaceObjectsResult::SceneError;
+        ROS_ERROR("unaspected error calling %s service",m_remove_object_srv.getService().c_str());
+        as->setAborted(action_res,"unaspected error calling removing object server");
+        return;
+      }
+      if (!remove_srv.response.success)
+      {
+        action_res.result=manipulation_msgs::PlaceObjectsResult::SceneError;
+        ROS_ERROR("unable to remove object id %s",goal->object_id.c_str());
+        as->setAborted(action_res,"unable to remove object");
+        m_slot_busy.at(selected_id)=false;
+        return;
+      }
+      ROS_PROTO("remove collision object %s ",goal->object_id.c_str());
+    }
+
 
 
     std_srvs::SetBool grasp_req;
@@ -603,7 +658,7 @@ namespace pickplace
       ROS_ERROR("%s: unable to get actual state",m_pnh.getNamespace().c_str());
       action_res.result=manipulation_msgs::PlaceObjectsResult::SceneError;
       as->setAborted(action_res,"unable to get actual state");
-      m_slot_busy.at(place_id)=false;
+      m_slot_busy.at(selected_id)=false;
       return;
     }
 
@@ -611,11 +666,13 @@ namespace pickplace
      * Return to approach position
      * ===========================*/
     ros::Time return_time_init=ros::Time::now();
+    std::vector<std::string> tmp_ids;tmp_ids.push_back(selected_id);
     moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(group_name,
-                                                                                        place_id,
+                                                                                        tmp_ids,
                                                                                         slot_jconf,
                                                                                         result,
-                                                                                        approach_slot_jconf);
+                                                                                        approach_slot_jconf,
+                                                                                        selected_id);
 
     if (!result)
     {
@@ -674,7 +731,7 @@ namespace pickplace
 
     for (unsigned int iter=0;iter<N_MAX_ITER;iter++)
     {
-      if (solutions.size()>=N_ITER)
+      if (solutions.size()>=ntrial)
         break;
       if (iter<n_seed)
       {
@@ -697,13 +754,20 @@ namespace pickplace
           continue;
 
         state.updateCollisionBodyTransforms();
-        if (!planning_scene->isStateValid(state))
+        if (!planning_scene->isStateValid(state,group_name))
           continue;
 
-        double dist=(js-actual_configuration).norm();
         if (solutions.size()==0)
         {
-          solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
+          std::vector<Eigen::VectorXd> multiturn=m_chains.at(group_name)->getMultiplicity(js);
+          for (const Eigen::VectorXd& tmp: multiturn)
+          {
+            state.setJointGroupPositions(group_name,tmp);
+            if (!state.satisfiesBounds())
+              continue;
+            double dist=(tmp-actual_configuration).norm();
+            solutions.insert(std::pair<double,Eigen::VectorXd>(dist,tmp));
+          }
           found=true;
         }
         else
@@ -719,7 +783,15 @@ namespace pickplace
           }
           if (is_diff)
           {
-            solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
+            std::vector<Eigen::VectorXd> multiturn=m_chains.at(group_name)->getMultiplicity(js);
+            for (const Eigen::VectorXd& tmp: multiturn)
+            {
+              state.setJointGroupPositions(group_name,tmp);
+              if (!state.satisfiesBounds())
+                continue;
+              double dist=(tmp-actual_configuration).norm();
+              solutions.insert(std::pair<double,Eigen::VectorXd>(dist,tmp));
+            }
             found=true;
           }
         }
@@ -754,7 +826,11 @@ namespace pickplace
 
     moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
     moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
+    int max_ik_goal_number=m_max_ik_goal_number.at(group_name);
+
+    m_mtx.lock();
     planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+    m_mtx.unlock();
     planning_scene->getCurrentStateNonConst();
     robot_state::RobotState state = *group->getCurrentState();
     state.setJointGroupPositions(jmg,starting_jconf);
@@ -769,26 +845,34 @@ namespace pickplace
     robot_state::RobotState goal_state(m_kinematic_model);
 
     std::vector<Eigen::VectorXd> sols=m_slot_configurations.at(group_name).at(place_id);
-
+    std::map<double,Eigen::VectorXd> solutions;
 
     for (const Eigen::VectorXd& goal: sols)
     {
 
       goal_state.setJointGroupPositions(jmg, goal);
       goal_state.updateCollisionBodyTransforms();
-      if (!planning_scene->isStateValid(goal_state))
+      if (!planning_scene->isStateValid(goal_state,group_name))
       {
         continue;
       }
 
-      moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
-      req.goal_constraints.push_back(joint_goal);
+      double normsol=(goal-starting_jconf).norm();
+      solutions.insert(std::pair<double,Eigen::VectorXd>(normsol,goal));
 
       if (m_use_single_goal.at(group_name))
         break;
-
     }
-    ROS_PROTO("Found %zu solution",sols.size());
+
+    for (const std::pair<double,Eigen::VectorXd>& p: solutions)
+    {
+      if (req.goal_constraints.size()>=max_ik_goal_number)
+        break;
+      goal_state.setJointGroupPositions(jmg, p.second);
+      moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
+      req.goal_constraints.push_back(joint_goal);
+    }
+    ROS_PROTO("Found %zu solution",req.goal_constraints.size());
 
 
     if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
@@ -802,6 +886,8 @@ namespace pickplace
     res.trajectory_->getRobotTrajectoryMsg(plan.trajectory_);
 
     res.trajectory_->getLastWayPoint().copyJointGroupPositions(jmg,slot_jconf);
+
+
     result= res.error_code_;
 
     return plan;
@@ -809,14 +895,17 @@ namespace pickplace
 
 
   moveit::planning_interface::MoveGroupInterface::Plan OutboundMosaic::planToApproachSlot(const std::string& group_name,
-                                                                                          const std::string& place_id,
+                                                                                          const std::vector<std::string>& place_ids,
                                                                                           const Eigen::VectorXd& starting_jconf,
                                                                                           moveit::planning_interface::MoveItErrorCode& result,
-                                                                                          Eigen::VectorXd& slot_jconf)
+                                                                                          Eigen::VectorXd& slot_jconf,
+                                                                                          std::string& selected_id)
   {
     moveit::planning_interface::MoveGroupInterface::Plan plan;
     moveit::planning_interface::MoveGroupInterfacePtr group=m_groups.at(group_name);
     moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
+    int max_ik_goal_number=m_max_ik_goal_number.at(group_name);
+
 
     if (!group->startStateMonitor(2))
     {
@@ -832,30 +921,44 @@ namespace pickplace
     req.allowed_planning_time=5;
     robot_state::RobotState goal_state(m_kinematic_model);
 
-    std::vector<Eigen::VectorXd> sols=m_approach_slot_configurations.at(group_name).at(place_id);
+    m_mtx.lock();
     planning_scene::PlanningScenePtr planning_scene= planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
-
-    if (m_use_single_goal.at(group_name))
-      ROS_INFO_THROTTLE(5,"%s: Single goal planning",group_name.c_str());
-    else
-      ROS_INFO_THROTTLE(5,"%s: Multi goal planning",group_name.c_str());
-    for (const Eigen::VectorXd& goal: sols)
+    m_mtx.unlock();
+    std::map<double,Eigen::VectorXd> solutions;
+    for (const std::string& place_id: place_ids)
     {
-
-      goal_state.setJointGroupPositions(jmg, goal);
-      goal_state.updateCollisionBodyTransforms();
-      if (!planning_scene->isStateValid(goal_state))
+      std::vector<Eigen::VectorXd> sols=m_approach_slot_configurations.at(group_name).at(place_id);
+      for (const Eigen::VectorXd& goal: sols)
       {
-        continue;
-      }
-      moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
-      req.goal_constraints.push_back(joint_goal);
 
+        goal_state.setJointGroupPositions(jmg, goal);
+        goal_state.updateCollisionBodyTransforms();
+        if (!planning_scene->isStateValid(goal_state,group_name))
+        {
+          planning_scene->isStateValid(goal_state,group_name,true);
+          continue;
+        }
+        double normsol=(goal-starting_jconf).norm();
+        solutions.insert(std::pair<double,Eigen::VectorXd>(normsol,goal));
+
+
+        if (m_use_single_goal.at(group_name))
+          break;
+      }
       if (m_use_single_goal.at(group_name))
         break;
-
     }
-    ROS_PROTO("Found %zu solution",sols.size());
+
+    for (const std::pair<double,Eigen::VectorXd>& p: solutions)
+    {
+      if (req.goal_constraints.size()>=max_ik_goal_number)
+        break;
+      goal_state.setJointGroupPositions(jmg, p.second);
+      moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
+      req.goal_constraints.push_back(joint_goal);
+    }
+
+    ROS_PROTO("Found %zu solution",req.goal_constraints.size());
 
     if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
     {
@@ -874,6 +977,29 @@ namespace pickplace
       res.trajectory_->getLastWayPoint().copyJointGroupPositions(jmg,slot_jconf);
     result= res.error_code_;
 
+    ROS_PROTO("Search selected place_id");
+    bool found_id=false;
+
+    for (const std::string& place_id: place_ids)
+    {
+      std::vector<Eigen::VectorXd> sols=m_approach_slot_configurations.at(group_name).at(place_id);
+      for (const Eigen::VectorXd& goal: sols)
+      {
+        if ((goal-slot_jconf).norm()<1e-6)
+        {
+          selected_id=place_id;
+          found_id=true;
+          break;
+        }
+      }
+      if (found_id)
+        break;
+    }
+    if (!found_id)
+    {
+      ROS_ERROR("unable to find the selected place_id");
+      throw std::invalid_argument("unable to find the selected place_id");
+    }
     return plan;
   }
 
@@ -934,6 +1060,17 @@ namespace pickplace
       ROS_INFO("Outbound mosaic reset");
     }
     return true;
+  }
+
+  void OutboundMosaic::updatePlanningScene(const moveit_msgs::PlanningScene& scene)
+  {
+    m_mtx.lock();
+    for (const std::string& group: m_group_names)
+    {
+      if (!m_planning_scene.at(group)->setPlanningSceneMsg(scene))
+        ROS_ERROR("unable to update planning scene");
+    }
+    m_mtx.unlock();
   }
 
 

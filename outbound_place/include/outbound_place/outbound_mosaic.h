@@ -51,6 +51,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <std_srvs/SetBool.h>
 #include <rosparam_utilities/rosparam_utilities.h>
 #include <object_loader_msgs/detachObject.h>
+#include <object_loader_msgs/removeObjects.h>
 #include <tf/transform_listener.h>
 #include <tf_conversions/tf_eigen.h>
 #include <rosdyn_core/primitives.h>
@@ -58,12 +59,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <moveit_planning_helper/manage_trajectories.h>
 #include <moveit_msgs/DisplayTrajectory.h>
 
-#define N_ITER 30
-#define N_MAX_ITER 2000
-#define TOLERANCE 1e-6
+#define N_ITER 200
+#define N_MAX_ITER 4000
+#define TOLERANCE 1e-3
 
 
-#define ROS_PROTO(...) ROS_LOG(::ros::console::levels::Debug, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
+#define ROS_PROTO(...) ROS_LOG(::ros::console::levels::Info, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
 
 
 namespace pickplace {
@@ -89,16 +90,20 @@ protected:
 
   std::string world_frame="world";
   std::map<std::string,bool> m_use_single_goal;
-
+  bool m_finite_slot;
   std::vector<std::string> m_request_adapters;
   std::map<std::string,double> m_fjt_result;
 
   ros::ServiceClient m_grasp_srv;
   ros::ServiceClient m_detach_object_srv;
+  ros::ServiceClient m_remove_object_srv;
   ros::ServiceServer m_reset_srv;
   ros::Publisher m_target_pub;
   ros::NodeHandle m_nh;
   ros::NodeHandle m_pnh;
+
+  std::mutex m_mtx;
+  int ik_sol_number;
 
   ros::Publisher m_display_publisher;
 
@@ -111,6 +116,8 @@ protected:
   std::map<std::string,std::map<std::string,std::vector<Eigen::VectorXd>>> m_approach_slot_configurations;
 
   std::map<std::string,bool> m_slot_busy;
+  std::map<std::string,int> m_max_ik_goal_number;
+
 
   bool m_init=false;
   bool ik(const std::string& group_name,
@@ -134,22 +141,24 @@ public:
 
   bool init();
 
+  void updatePlanningScene(const moveit_msgs::PlanningScene &scene);
 
   void placeObjectGoalCb(const manipulation_msgs::PlaceObjectsGoalConstPtr& goal,
                          const std::string& group_name);
 
 
   moveit::planning_interface::MoveGroupInterface::Plan planToSlot(const std::string& group_name,
-                                                                  const std::string& place_id,
+                                                                  const std::string &place_id,
                                                                   const Eigen::VectorXd& starting_jconf,
                                                                   moveit::planning_interface::MoveItErrorCode& result,
                                                                   Eigen::VectorXd& slot_jconf);
 
   moveit::planning_interface::MoveGroupInterface::Plan planToApproachSlot(const std::string& group_name,
-                                                                          const std::string& place_id,
+                                                                          const std::vector<std::string>& place_ids,
                                                                           const Eigen::VectorXd& starting_jconf,
                                                                           moveit::planning_interface::MoveItErrorCode& result,
-                                                                          Eigen::VectorXd& slot_jconf);
+                                                                          Eigen::VectorXd& slot_jconf,
+                                                                          std::string &selected_id);
 
 
 

@@ -3,6 +3,7 @@
 #include <inbound_pick/pick_objects.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <eigen_conversions/eigen_msg.h>
+#include <moveit_msgs/GetPlanningScene.h>
 
 int main(int argc, char **argv)
 {
@@ -12,6 +13,9 @@ int main(int argc, char **argv)
   ros::AsyncSpinner spinner(8);
   spinner.start();
 
+  ros::ServiceClient ps_client=nh.serviceClient<moveit_msgs::GetPlanningScene>("/get_planning_scene");
+  ps_client.waitForExistence();
+  moveit_msgs::GetPlanningScene ps_srv;
   pickplace::PickObjects pick(nh,pnh);
 
   if (!pick.init())
@@ -23,6 +27,11 @@ int main(int argc, char **argv)
   ros::Rate lp(10);
   while (ros::ok())
   {
+
+    if (!ps_client.call(ps_srv))
+      ROS_ERROR("call to get_planning_scene srv not ok");
+    else
+      pick.updatePlanningScene(ps_srv.response.scene);
     lp.sleep();
     pick.publishTF();
   }

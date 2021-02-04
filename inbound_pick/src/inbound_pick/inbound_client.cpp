@@ -191,24 +191,24 @@ bool InboundFromParam::readObjectFromParam()
     ROS_ERROR("The param is not a list of boxed" );
     return false;
   }
-  ROS_DEBUG("there are %zu objects",config.size());
+  ROS_DEBUG("there are %d objects",config.size());
 
 
   object_loader_msgs::addObjects srv;
   std::map<std::string,std::shared_ptr<manipulation_msgs::AddObjects>> add_objs_srv;
 
 
-  for(size_t i=0; i < config.size(); i++)
+  for(int i=0; i < config.size(); i++)
   {
     XmlRpc::XmlRpcValue object = config[i];
     if( object.getType() != XmlRpc::XmlRpcValue::TypeStruct)
     {
-      ROS_WARN("The element #%zu is not a struct", i);
+      ROS_WARN("The element #%d is not a struct", i);
       continue;
     }
     if( !object.hasMember("type") )
     {
-      ROS_WARN("The element #%zu has not the field 'name'", i);
+      ROS_WARN("The element #%d has not the field 'name'", i);
       continue;
     }
     std::string type=rosparam_utilities::toString(object["type"]);
@@ -222,7 +222,7 @@ bool InboundFromParam::readObjectFromParam()
 
     if( !object.hasMember("inbound") )
     {
-      ROS_WARN("The element #%zu has not the field 'inbound'", i);
+      ROS_WARN("The element #%d has not the field 'inbound'", i);
       continue;
     }
     std::string box_name=rosparam_utilities::toString(object["inbound"]);
@@ -237,7 +237,7 @@ bool InboundFromParam::readObjectFromParam()
 
     if( !object.hasMember("frame") )
     {
-      ROS_WARN("The element #%zu has not the field 'frame'", i);
+      ROS_WARN("The element #%d has not the field 'frame'", i);
       continue;
     }
     std::string frame_name=rosparam_utilities::toString(object["frame"]);
@@ -313,7 +313,7 @@ bool InboundFromParam::readObjectFromParam()
 
     if( !type_config.hasMember("grasp_poses") )
     {
-      ROS_WARN("The element #%zu has not the field 'box'", i);
+      ROS_WARN("The element #%d has not the field 'box'", i);
       continue;
     }
     if (type_config["grasp_poses"].getType() != XmlRpc::XmlRpcValue::TypeArray)
@@ -321,13 +321,13 @@ bool InboundFromParam::readObjectFromParam()
       ROS_ERROR("The param is not a list of boxed" );
       return false;
     }
-    for (unsigned int ig=0;ig<type_config["grasp_poses"].size();ig++)
+    for (int ig=0;ig<type_config["grasp_poses"].size();ig++)
     {
       XmlRpc::XmlRpcValue pose = type_config["grasp_poses"][ig];
 
       if( !pose.hasMember("tool") )
       {
-        ROS_WARN("The element #%zu has not the field 'tool'", ig);
+        ROS_WARN("The element #%d has not the field 'tool'", ig);
         continue;
       }
       std::string tool_name=rosparam_utilities::toString(pose["tool"]);
@@ -336,7 +336,7 @@ bool InboundFromParam::readObjectFromParam()
       std::vector<double> position;
       if( !rosparam_utilities::getParamVector(pose,"position",position) )
       {
-        ROS_WARN("The element #%zu has not the field 'name'", ig);
+        ROS_WARN("The element #%d has not the field 'name'", ig);
         continue;
       }
       assert(position.size()==3);

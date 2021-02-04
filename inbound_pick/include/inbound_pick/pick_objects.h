@@ -59,16 +59,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <moveit_planning_helper/manage_trajectories.h>
 #include <moveit_msgs/DisplayTrajectory.h>
 
-#define N_MAX_ITER 2000
-#define N_TRIAL 30
-#define TOLERANCE 1e-6
+#define N_MAX_ITER 20000
+#define N_TRIAL 200
+#define TOLERANCE 1e-3
 
 namespace pickplace {
 
-typedef std::map<std::string,
-Eigen::Affine3d,
-std::less<std::string>,
-Eigen::aligned_allocator<std::pair<const std::string, Eigen::Affine3d>>>  PosesMap;
+typedef std::multimap<std::string,
+                      Eigen::Affine3d,
+                      std::less<std::string>,
+                      Eigen::aligned_allocator<std::pair<const std::string, Eigen::Affine3d>>>  PosesMap;
 typedef std::pair<std::string,Eigen::Affine3d>  PosesPair;
 
 class PickObjects
@@ -83,12 +83,12 @@ protected:
   std::vector<std::string> m_request_adapters;
 
   ros::Publisher m_display_publisher;
-
+  int m_ik_sol_number=200;
 
   std::map<std::string,bool> m_use_single_goal;
 
   std::mutex m_mtx;
-
+  std::mutex m_scene_mtx;
   ros::NodeHandle m_nh;
   ros::NodeHandle m_pnh;
 
@@ -203,6 +203,9 @@ public:
   friend std::ostream& operator<<  (std::ostream& os, const PickObjects& pick_objs);
 
   void publishTF();
+
+  void updatePlanningScene(const moveit_msgs::PlanningScene &scene);
+
 };
 
 
