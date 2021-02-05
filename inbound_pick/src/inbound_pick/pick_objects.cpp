@@ -1178,6 +1178,7 @@ void PickObjects::doneCb(const actionlib::SimpleClientGoalState &state, const co
 bool  PickObjects::wait(const std::string& group_name)
 {
   ros::Time t0=ros::Time::now();
+  ros::Duration(0.1).sleep();
   while (std::isnan(m_fjt_result.at(group_name)))
   {
     ros::Duration(0.01).sleep();

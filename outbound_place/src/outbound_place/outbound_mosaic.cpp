@@ -1023,6 +1023,7 @@ namespace pickplace
   {
     ros::Time t0=ros::Time::now();
     m_fjt_clients.at(group_name)->waitForResult();
+    ros::Duration(0.1).sleep();
 
     while (std::isnan(m_fjt_result.at(group_name)))
     {
