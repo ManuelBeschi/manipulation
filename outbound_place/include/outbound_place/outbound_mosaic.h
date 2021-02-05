@@ -58,6 +58,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <moveit_planning_helper/manage_trajectories.h>
 #include <moveit_msgs/DisplayTrajectory.h>
+#include <mutex>
 
 #define N_ITER 200
 #define N_MAX_ITER 4000
