@@ -1,17 +1,13 @@
 #include <ros/ros.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <eigen_conversions/eigen_msg.h>
-#include <actionlib/client/simple_action_client.h>
-#include <manipulation_msgs/AddObjects.h>
-#include <manipulation_msgs/AddBox.h>
-#include <manipulation_msgs/PickObjectsAction.h>
-#include <inbound_pick/inbound_client.h>
 #include <std_srvs/SetBool.h>
+#include <manipulation_utils/inbound_pick_utils.h>
 
 
-std::shared_ptr<pickplace::InboundFromParam> inb;
 
-bool addObjectsCb(std_srvs::SetBoolRequest& req, std_srvs::SetBoolResponse& res)
+std::shared_ptr<manipulation::InboundPickFromParam> inb;
+
+bool addObjectsCb(std_srvs::SetBoolRequest& req, 
+                  std_srvs::SetBoolResponse& res)
 {
   if (!inb->readObjectFromParam())
   {
@@ -24,27 +20,26 @@ bool addObjectsCb(std_srvs::SetBoolRequest& req, std_srvs::SetBoolResponse& res)
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "inbound_client");
-  ros::NodeHandle nh;
+  ros::init(argc, argv, "inbound_pick_loader");
+  ros::NodeHandle nh("inbound_pick_server");
 
-  inb=std::make_shared<pickplace::InboundFromParam>(nh);
-
-
+  inb = std::make_shared<manipulation::InboundPickFromParam>(nh);
 
   if (!inb->readBoxesFromParam())
   {
-    ROS_ERROR("Unable to load boxed");
+    ROS_ERROR("Unable to load boxes");
     return 0;
   }
-  if (!inb->readObjectFromParam())
-  {
-    ROS_ERROR("Unable to load objects in the boxes");
-    return 0;
-  }
+
+  // if (!inb->readObjectFromParam())
+  // {
+  //   ROS_ERROR("Unable to load objects in the boxes");
+  //   return 0;
+  // }
 
   ROS_INFO("Inbound boxed loaded");
 
-  ros::ServiceServer src=nh.advertiseService("inbound/add_objects",&addObjectsCb);
+  ros::ServiceServer src = nh.advertiseService("inbound/add_objects",&addObjectsCb);
   ros::spin();
   return 0;
 }

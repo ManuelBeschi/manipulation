@@ -39,7 +39,7 @@ namespace manipulation
                         m_nh(nh),
                         m_pnh(pnh),
                         m_init(false),
-                        LocationManager(nh)
+                        LocationManager(pnh)
   {
     // nothing to do ...
   }
@@ -49,8 +49,8 @@ namespace manipulation
     if (!LocationManager::init())
       m_init = false;
 
-    m_grasp_srv = m_nh.serviceClient<std_srvs::SetBool>("/gripper/grasp");    
-    m_target_pub = m_nh.advertise<geometry_msgs::PoseStamped>("target",1);
+    m_grasp_srv = m_pnh.serviceClient<std_srvs::SetBool>("gripper/grasp");    
+    m_target_pub = m_pnh.advertise<geometry_msgs::PoseStamped>("target",1);
 
     m_init = true;
     return m_init;
@@ -72,7 +72,7 @@ namespace manipulation
 
   bool SkillBase::wait(const std::string& group_name)
   {
-    ros::Time t0=ros::Time::now();
+    ros::Time t0 = ros::Time::now();
     while (std::isnan(m_fjt_result.at(group_name)))
     {
       ros::Duration(0.01).sleep();

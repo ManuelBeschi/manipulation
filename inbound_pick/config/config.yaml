@@ -7,8 +7,8 @@ request_adapters:
 
 inbound:
   boxes:
-  - {name: "box1", position: [0.423, 0.394, 1.1], quaternion: [0, 1, 0, 0], heigth: 0.1}
-  - {name: "box2", position: [0.85, 0.37, 1.1], quaternion: [0, 1, 0, 0], heigth: 0.1}
+  - {name: "box1", frame: "table", position: [0.423, 0.394, 1.1], quaternion: [0, 1, 0, 0], heigth: 0.1}
+  - {name: "box2", frame: "table", position: [0.85, 0.37, 1.1], quaternion: [0, 1, 0, 0], heigth: 0.1}
   #- Translation: [-0.038, 0.235, 0.985]
   #- Rotation: in Quaternion [-0.010, 0.996, 0.092, 0.000]
 
@@ -20,11 +20,9 @@ inbound:
     grasp_poses:
     - {tool: "tip", position: [0.423, 0.394, 1.1], quaternion: [0, 1, 0, 0]}
 
-
   - type: "type1"
     box: "box2"
 
     grasp_poses:
     - {tool: "tip", position: [0.85, 0.37, 1.1], quaternion: [0, 1, 0, 0]}
-
 

@@ -13,7 +13,9 @@
 
 <param name="planning_plugin" value="$(arg planning_plugin)" />
 
-<rosparam command="load" file="$(find dimostratore_moveit_config)/config/ha_planning.yaml"/>
+<!--rosparam command="load" file="$(find dimostratore_moveit_config)/config/ha_planning.yaml"/-->
+<rosparam command="load" file="$(find sharework_cembre_moveit_config)/config/ha_planning.yaml"/>
+
 <rosparam command="load" file="$(find inbound_pick)/config/config.yaml"/>
 <node pkg="inbound_pick" type="inbound_pick_server" name="inbound_pick_server" />
 <node pkg="inbound_pick" type="inbound_pick_loader" name="inbound_pick_loader" />

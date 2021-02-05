@@ -109,7 +109,7 @@ namespace manipulation
 
       friend std::ostream& operator<<  (std::ostream& os, const PickObjects& pick_objs);
 
-      //void publishTF();
+      void publishTF();
 
   };
 

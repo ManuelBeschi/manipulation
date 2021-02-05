@@ -10,21 +10,56 @@
 namespace manipulation
 {
 
-bool removeLocation(const std::string& location_name)
-{
-  if(!ros::service::exists("remove_locations",true))
-  {
-    manipulation_msgs::RemoveLocations::Request req;
-    manipulation_msgs::RemoveLocations::Response res;
-    
-    req.location_names.push_back(location_name);
+bool addLocation( const ros::NodeHandle& nh,
+                  const manipulation_msgs::Location& location)
+{  
+  ros::NodeHandle nh_= nh; 
+  ros::ServiceClient add_locations_client = nh_.serviceClient<manipulation_msgs::AddLocations>("add_locations");
 
-    if(!ros::service::call("remove_locations",req,res))
+  if(add_locations_client.exists())
+  {
+    manipulation_msgs::AddLocations add_locations;
+
+    add_locations.request.locations.push_back(location);
+
+    if(!add_locations_client.call(add_locations))
     {
-      ROS_ERROR("Can't remove the location %s from the location manager.",location_name.c_str());
+      ROS_ERROR("Error while calling the service %s.", add_locations_client.getService().c_str());
       return false;
     }
-    ROS_INFO("Removed the location %s from the location manager.",location_name.c_str());
+    ROS_WARN("add_locations.response.results = %d",add_locations.response.results);
+    if (add_locations.response.results != manipulation_msgs::AddLocations::Response::Error)
+      ROS_INFO("Added the location %s to the location manager.",location.name.c_str());
+  }
+  else
+  {
+    ROS_ERROR("The service add_locations is not available.");
+    return false;
+  }
+
+  return true;
+}
+
+bool removeLocation(const ros::NodeHandle& nh,
+                    const std::string& location_name)
+{
+  ros::NodeHandle nh_= nh; 
+  ros::ServiceClient remove_locations_client = nh_.serviceClient<manipulation_msgs::RemoveLocations>("remove_locations");
+  
+  if(remove_locations_client.exists())
+  {
+    manipulation_msgs::RemoveLocations remove_location;
+    remove_location.request.location_names.push_back(location_name);
+
+    if(!remove_locations_client.call(remove_location))
+    {
+      ROS_ERROR("Error while calling the service %s.", remove_locations_client.getService().c_str());
+      return false;
+    }
+
+    ROS_WARN("add_locations.response.results = %d",remove_location.response.results);
+    if (remove_location.response.results != manipulation_msgs::RemoveLocations::Response::Error)
+      ROS_INFO("Removed the location %s from the location manager.",location_name.c_str());
   }
   else
   {
@@ -35,44 +70,35 @@ bool removeLocation(const std::string& location_name)
   return true; 
 }
 
-Grasp::Grasp(const manipulation_msgs::Grasp& grasp)
+Grasp::Grasp( const ros::NodeHandle& nh,
+              const manipulation_msgs::Grasp& grasp):
+              m_nh(nh)
 {
-  if(!ros::service::exists("add_locations",true))
-  {
-    manipulation_msgs::AddLocations::Request req;
-    manipulation_msgs::AddLocations::Response res;
-
-    req.locations.push_back(grasp.location);
-
-    if(!ros::service::call("add_locations",req,res))
-    {
-      ROS_ERROR("Can't add the location %s from the location manager.",grasp.location.name.c_str());
-      return;
-    }
-    
-    m_tool_name = grasp.tool_name;
-    m_location_name = grasp.location.name;
-    ROS_INFO("Added the new location %s to the location manager.",grasp.location.name.c_str());  
-  }
-  else
-    ROS_ERROR("The service add_locations is not available.");
+  if(!addLocation(m_nh,grasp.location))
+    return;
+  
+  m_tool_name = grasp.tool_name;
+  m_location_name = grasp.location.name;
+  ROS_INFO("Added the new location %s to the location manager.",grasp.location.name.c_str());
 
   return;
 }
 
 Grasp::~Grasp()
 {
-  if(!removeLocation(m_location_name))
+  if(!removeLocation(m_nh, m_location_name))
     ROS_ERROR("Can't remove the location %s from location manager.", m_location_name.c_str());
 }
 
-Object::Object( const manipulation_msgs::Object& object )
+Object::Object( const ros::NodeHandle& nh,
+                const manipulation_msgs::Object& object ):
+                m_nh(nh)
 {
   m_name = object.name;
   m_type = object.type;
 
   for (const manipulation_msgs::Grasp grasp: object.grasping_locations )
-    m_grasp.push_back(std::make_shared<Grasp>(grasp));
+    m_grasp.push_back(std::make_shared<Grasp>(m_nh,grasp));
   
   ROS_INFO("Added the object: %s of the type: %s.", m_name.c_str(), m_type.c_str()); 
 }
@@ -104,43 +130,27 @@ manipulation::GraspPtr Object::getGrasp(const std::string& grasp_location_name)
   return nullptr;
 }
 
-Box::Box(const manipulation_msgs::Box& box)
+Box::Box( const ros::NodeHandle& nh,
+          const manipulation_msgs::Box& box):
+          m_nh(nh)
 {
-
-  if(!ros::service::exists("add_locations",true))
-  {
-    manipulation_msgs::AddLocations::Request req;
-    manipulation_msgs::AddLocations::Response res;
-
-    req.locations.push_back(box.location);
-
-    if(!ros::service::call("add_locations",req,res))
-    {
-      ROS_ERROR("Can't add the location %s to the location manager.",box.location.name.c_str());
-      return;
-    }
-
-    m_name = box.name;
-    m_height = box.height;
-    m_location_name = box.location.name;
-
-    ROS_INFO("Added the location %s to the location manager.",box.location.name.c_str());
-  }
-  else
-  {
-    ROS_ERROR("The service add_locations is not available.");
+  if(!addLocation(m_nh,box.location))
     return;
-  }
+ 
+
+  m_name = box.name;
+  m_height = box.height;
+  m_location_name = box.location.name;
     
   for (const manipulation_msgs::Object object: box.objects )
-    m_objects.insert(std::pair<std::string,ObjectPtr>(object.name, std::make_shared<Object>(object)));
+    m_objects.insert(std::pair<std::string,ObjectPtr>(object.name, std::make_shared<Object>(m_nh,object)));
   
    ROS_INFO("Added the box %s.", m_name.c_str()); 
 }
 
 Box::~Box()
 {
-  if(!removeLocation(m_location_name))
+  if(!removeLocation(m_nh,m_location_name))
     ROS_ERROR("Can't remove the location %s from location manager.", m_location_name.c_str());
 }
 
@@ -152,7 +162,7 @@ bool Box::addObject(const manipulation_msgs::Object& object)
     return false;
   }
 
-  m_objects.insert(std::pair<std::string,ObjectPtr>(object.name,std::make_shared<Object>(object)));
+  m_objects.insert(std::pair<std::string,ObjectPtr>(object.name,std::make_shared<Object>(m_nh,object)));
 
   return true;
 }

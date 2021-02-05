@@ -42,7 +42,7 @@ Location::Location( const std::string& name,
                     m_name(name),
                     m_T_w_location(T_w_location),
                     m_T_w_approach(T_w_approach),
-                    m_T_w_return(T_w_leave)
+                    m_T_w_leave(T_w_leave)
 {
 
 }
@@ -55,9 +55,9 @@ Location::Location(const manipulation_msgs::Location &msg)
   tf::poseMsgToEigen(msg.approach_relative_pose,T_location_approach);
   m_T_w_approach = m_T_w_location * T_location_approach;
 
-  Eigen::Affine3d T_location_return;
-  tf::poseMsgToEigen(msg.approach_relative_pose,T_location_return);
-  m_T_w_return = m_T_w_location * T_location_return;
+  Eigen::Affine3d T_location_leave;
+  tf::poseMsgToEigen(msg.leave_relative_pose,T_location_leave);
+  m_T_w_leave = m_T_w_location * T_location_leave;
 
   m_name = msg.name;
   m_frame = msg.frame;
@@ -86,12 +86,12 @@ void Location::addApproachIk( const std::string &group_name,
     m_approach_location_configurations.at(group_name) = solutions;
 }
 
-void Location::addReturnIk(const std::string &group_name, const std::vector<Eigen::VectorXd> &solutions)
+void Location::addLeaveIk(const std::string &group_name, const std::vector<Eigen::VectorXd> &solutions)
 {
-  if ( m_return_location_configurations.find(group_name) == m_return_location_configurations.end() )
-    m_return_location_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(group_name, solutions));
+  if ( m_leave_location_configurations.find(group_name) == m_leave_location_configurations.end() )
+    m_leave_location_configurations.insert(std::pair<std::string,std::vector<Eigen::VectorXd>>(group_name, solutions));
   else
-    m_return_location_configurations.at(group_name) = solutions;
+    m_leave_location_configurations.at(group_name) = solutions;
 }
 
 
@@ -113,7 +113,7 @@ bool LocationManager::init()
 
   if (!m_nh.getParam("request_adapters", m_request_adapters))
   {
-    ROS_ERROR_STREAM("Could not find request_adapters in namespace " << m_nh.getNamespace());
+    ROS_ERROR("Could not find request_adapters in namespace %s ", m_nh.getNamespace().c_str());
     return false;
   }
 
@@ -244,9 +244,9 @@ bool LocationManager::init()
 
   }
 
-  m_add_locations_srv = m_nh.advertiseService("~/add_locations",&LocationManager::addLocationsCb,this);
-  m_remove_locations_srv = m_nh.advertiseService("~/remove_locations",&LocationManager::removeLocationsCb,this);
-  
+  m_add_locations_srv = m_nh.advertiseService("add_locations",&LocationManager::addLocationsCb,this);
+  m_remove_locations_srv = m_nh.advertiseService("remove_locations",&LocationManager::removeLocationsCb,this);
+
   return true;
 }
 
@@ -254,8 +254,11 @@ bool LocationManager::addLocationsCb( manipulation_msgs::AddLocations::Request& 
                                       manipulation_msgs::AddLocations::Response& res)
 {
   if(!addLocationsFromMsg(req.locations))
+  {
+    res.results = manipulation_msgs::AddLocations::Response::Error;
     return false;
-
+  }
+    
   res.results = manipulation_msgs::AddLocations::Response::Success;
   return true;
 }
@@ -264,8 +267,12 @@ bool LocationManager::removeLocationsCb(manipulation_msgs::RemoveLocations::Requ
                                         manipulation_msgs::RemoveLocations::Response& res)
 {
   if(!removeLocations(req.location_names))
+  {
+    res.results = manipulation_msgs::RemoveLocations::Response::Error;
     return false;
+  }
 
+  res.results = manipulation_msgs::RemoveLocations::Response::Success;
   return true;
 }
 
@@ -326,12 +333,12 @@ bool LocationManager::addLocationFromMsg(const manipulation_msgs::Location& loca
     }
     location_ptr->addApproachIk(group.first,sols);
 
-    if (!ik(group.first,location_ptr->m_T_w_return,sols))
+    if (!ik(group.first,location_ptr->m_T_w_leave,sols))
     {
       ROS_INFO("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
       continue;
     }
-    location_ptr->addReturnIk(group.first,sols);
+    location_ptr->addLeaveIk(group.first,sols);
   }
 
   m_locations.insert(std::pair<std::string,LocationPtr>(location_ptr->m_name,location_ptr));
@@ -346,7 +353,7 @@ bool LocationManager::addLocationsFromMsg(const std::vector<manipulation_msgs::L
     if(!addLocationFromMsg(location))
     {
       ROS_ERROR("Can't add the location %s",location.name.c_str());
-      return false;  
+      continue;  
     }
   }
   
@@ -462,7 +469,7 @@ std::vector<Eigen::VectorXd> LocationManager::getIkSolForLocation(const std::str
     jconf_single_location = m_locations.at(location_name)->getLocationIk(group_name);
     break;
   case Location::Leave:
-    jconf_single_location = m_locations.at(location_name)->getReturnIk(group_name);
+    jconf_single_location = m_locations.at(location_name)->getLeaveIk(group_name);
     break;
   }
 
@@ -537,7 +544,7 @@ bool LocationManager::ik(const std::string& group_name,
       if (solutions.size()==0)
       {
         solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
-        found=true;
+        found = true;
       }
       else
       {
@@ -553,7 +560,7 @@ bool LocationManager::ik(const std::string& group_name,
         if (is_diff)
         {
           solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
-          found=true;
+          found = true;
         }
       }
     }

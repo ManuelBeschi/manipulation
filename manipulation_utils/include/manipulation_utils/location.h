@@ -72,7 +72,7 @@ class LocationManager;
 class Location
 {
 public:
-//  enum Status { empty, full, error};
+
   enum Destination { Approach, To, Leave};
   Location(const std::string& name,
            const Eigen::Affine3d& T_w_location,
@@ -85,17 +85,17 @@ public:
 
   void addLocationIk( const std::string& group_name, const std::vector<Eigen::VectorXd>& solutions);
   void addApproachIk( const std::string& group_name, const std::vector<Eigen::VectorXd>& solutions);
-  void addReturnIk(   const std::string& group_name, const std::vector<Eigen::VectorXd>& solutions);
+  void addLeaveIk(   const std::string& group_name, const std::vector<Eigen::VectorXd>& solutions);
 
   bool canBePickedBy(const std::string& group_name);
   
   Eigen::Affine3d getLocation(){return m_T_w_location;}
   Eigen::Affine3d getApproach(){return m_T_w_approach;}
-  Eigen::Affine3d getReturn  (){return m_T_w_return;}
+  Eigen::Affine3d getLeave  (){return m_T_w_leave;}
 
   std::vector<Eigen::VectorXd> getLocationIk(const std::string& group_name){return m_location_configurations.at(group_name);}
   std::vector<Eigen::VectorXd> getApproachIk(const std::string& group_name){return m_approach_location_configurations.at(group_name);}
-  std::vector<Eigen::VectorXd> getReturnIk  (const std::string& group_name){return m_return_location_configurations.at(group_name);}
+  std::vector<Eigen::VectorXd> getLeaveIk  (const std::string& group_name){return m_leave_location_configurations.at(group_name);}
 
 protected:
 //  Status m_status;
@@ -103,11 +103,11 @@ protected:
   std::string m_frame;
   Eigen::Affine3d m_T_w_location;  // world <- location
   Eigen::Affine3d m_T_w_approach;  // world <- approach
-  Eigen::Affine3d m_T_w_return;    // world <- return
+  Eigen::Affine3d m_T_w_leave;    // world <- return
 
   std::map<std::string,std::vector<Eigen::VectorXd>> m_location_configurations;
   std::map<std::string,std::vector<Eigen::VectorXd>> m_approach_location_configurations;
-  std::map<std::string,std::vector<Eigen::VectorXd>> m_return_location_configurations;
+  std::map<std::string,std::vector<Eigen::VectorXd>> m_leave_location_configurations;
 
 };
 typedef shared_ptr_namespace::shared_ptr<Location> LocationPtr;

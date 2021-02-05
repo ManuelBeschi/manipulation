@@ -43,7 +43,7 @@ namespace manipulation
                             m_pnh(pnh),
                             SkillBase(nh,pnh)
   {
-
+    // nothing to do here     
   }
 
   bool PickObjects::init()
@@ -51,18 +51,18 @@ namespace manipulation
     if (!SkillBase::init())  
       return false;
     
-    m_add_obj_srv = m_nh.advertiseService("add_objects",&PickObjects::addObjectsCb,this);
-    m_add_box_srv = m_nh.advertiseService("add_boxes",&PickObjects::addBoxesCb,this);
-    m_remove_objects_srv = m_nh.advertiseService("remove_objects",&PickObjects::removeObjectsCb,this);
-    m_list_objects_srv = m_nh.advertiseService("list_objects",&PickObjects::listObjectsCb,this);
-    m_reset_srv = m_nh.advertiseService("inboud/reset_box",&PickObjects::resetBoxesCb,this);
+    m_add_obj_srv = m_pnh.advertiseService("add_objects",&PickObjects::addObjectsCb,this);
+    m_add_box_srv = m_pnh.advertiseService("add_boxes",&PickObjects::addBoxesCb,this);
+    m_remove_objects_srv = m_pnh.advertiseService("remove_objects",&PickObjects::removeObjectsCb,this);
+    m_list_objects_srv = m_pnh.advertiseService("list_objects",&PickObjects::listObjectsCb,this);
+    m_reset_srv = m_pnh.advertiseService("inboud/reset_box",&PickObjects::resetBoxesCb,this);
 
-    m_attach_object_srv = m_nh.serviceClient<object_loader_msgs::attachObject>("attach_object_to_link");
+    m_attach_object_srv = m_pnh.serviceClient<object_loader_msgs::attachObject>("attach_object_to_link");
 
     for (const std::string& group_name: m_group_names)
     { 
       std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> as;
-      as.reset(new actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>( m_nh,
+      as.reset(new actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>( m_pnh,
                                                                                         group_name+"/pick",
                                                                                         boost::bind(&PickObjects::pickObjectGoalCb, this, _1, group_name),
                                                                                         false));
@@ -83,7 +83,7 @@ namespace manipulation
                                 manipulation_msgs::AddBoxes::Response& res)
   {
     for (const manipulation_msgs::Box& box: req.add_boxes )
-      m_boxes.insert(std::pair<std::string,BoxPtr>(box.name,std::make_shared<Box>(box)));
+      m_boxes.insert(std::pair<std::string,BoxPtr>(box.name,std::make_shared<Box>(m_pnh,box)));
      
     res.results = manipulation_msgs::AddBoxes::Response::Success;
     return true;
@@ -112,7 +112,7 @@ namespace manipulation
     {
       if (m_boxes.find(req.box_name) == m_boxes.end())
       {
-        ROS_ERROR("Cannot add object %s, the box %s does not exist.", object.name.c_str(),
+        ROS_ERROR("Can't add object %s, the box %s does not exist.", object.name.c_str(),
                                                                       req.box_name.c_str());
         return false;
       }
@@ -138,6 +138,15 @@ namespace manipulation
       {
         if (it->second->findObject(object_name))
         {
+          if (m_tf.find("pick/approach/"+object_name) != m_tf.end())
+            m_tf.erase(m_tf.find("pick/approach/"+object_name));
+
+          if (m_tf.find("pick/to/"+object_name) != m_tf.end())
+            m_tf.erase(m_tf.find("pick/to/"+object_name));
+
+          if (m_tf.find("pick/leave/"+object_name) != m_tf.end())
+            m_tf.erase(m_tf.find("pick/leave/"+object_name));
+
           if (!it->second->removeObject(object_name))
             ROS_ERROR("Can't remove object %s.", object_name.c_str()); 
         }
@@ -321,6 +330,17 @@ namespace manipulation
       std::string best_object_name = selected_box->findObjectByGraspingLocation(best_object_location_name);
       manipulation::ObjectPtr selected_object = selected_box->getObject(best_object_name);
       manipulation::GraspPtr selected_grasp_pose = selected_object->getGrasp(best_object_location_name);
+      
+      tf::Transform transform;
+      tf::transformEigenToTF(m_locations.at(selected_grasp_pose->getLocationName())->getApproach(), transform);
+      m_tf.insert(std::pair<std::string,tf::Transform>("pick/approach/"+selected_object->getName(),transform));
+
+      tf::transformEigenToTF(m_locations.at(selected_grasp_pose->getLocationName())->getLocation(), transform);
+      m_tf.insert(std::pair<std::string,tf::Transform>("pick/to/"+selected_object->getName(),transform));
+
+      tf::transformEigenToTF(m_locations.at(selected_grasp_pose->getLocationName())->getLeave(), transform);
+      m_tf.insert(std::pair<std::string,tf::Transform>("pick/leave/"+selected_object->getName(),transform));
+
       //
 
       if (!result)
@@ -480,5 +500,13 @@ namespace manipulation
       return;
     }
 
+  }
+
+  void PickObjects::publishTF()
+  {
+    for (const std::pair<std::string,tf::Transform>& t: m_tf)
+    {
+      m_broadcaster.sendTransform(tf::StampedTransform(t.second, ros::Time::now(), world_frame, t.first));
+    }
   }                    
 }

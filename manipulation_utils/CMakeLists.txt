@@ -31,7 +31,8 @@ add_library(${PROJECT_NAME}
 	    src/${PROJECT_NAME}/location.cpp
       src/${PROJECT_NAME}/skill_base.cpp
       src/${PROJECT_NAME}/manipulation_utils.cpp 
-      src/${PROJECT_NAME}/pick_objects.cpp 
+      src/${PROJECT_NAME}/pick_objects.cpp
+      src/${PROJECT_NAME}/inbound_pick_utils.cpp 
 )
 add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 

@@ -24,38 +24,43 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#include <inbound_pick/inbound_client.h>
-#include <rosparam_utilities/rosparam_utilities.h>
+
 #include <eigen3/Eigen/Geometry>
 #include <geometry_msgs/PoseStamped.h>
 #include <eigen_conversions/eigen_msg.h>
 #include <tf/transform_listener.h>
 #include <tf_conversions/tf_eigen.h>
+#include <rosparam_utilities/rosparam_utilities.h>
 
-namespace pickplace {
+#include <manipulation_msgs/Box.h>
+#include <manipulation_msgs/Grasp.h>
+#include <manipulation_utils/inbound_pick_utils.h> 
 
-InboundFromParam::InboundFromParam(const ros::NodeHandle &nh):
-  nh_(nh)
+namespace manipulation 
 {
-  add_objs_client_=nh_.serviceClient<manipulation_msgs::AddObjects>("add_objects");
-  add_box_client_ =nh_.serviceClient<manipulation_msgs::AddBox>("add_box");
-  add_col_objs_client_=nh_.serviceClient<object_loader_msgs::addObjects>("add_object_to_scene");
-  ROS_INFO_STREAM("Scene spawner is waiting  "<< add_col_objs_client_.getService());
+
+InboundPickFromParam::InboundPickFromParam( const ros::NodeHandle &nh):
+                                            nh_(nh)
+{
+  add_objs_client_ = nh_.serviceClient<manipulation_msgs::AddObjects>("add_objects");
+  add_box_client_ = nh_.serviceClient<manipulation_msgs::AddBoxes>("add_boxes");
+  add_col_objs_client_ = nh_.serviceClient<object_loader_msgs::addObjects>("/add_object_to_scene");
+  ROS_INFO("Scene spawner is waiting %s", add_col_objs_client_.getService().c_str());
   add_col_objs_client_.waitForExistence();
-  ROS_INFO("reading object to spawn");
+  ROS_INFO("Reading object to spawn");
 
   ROS_INFO("Waiting for pick server");
   add_box_client_.waitForExistence();
   ROS_INFO("Connection ok");
 
 }
-bool InboundFromParam::readBoxesFromParam()
-{
 
+bool InboundPickFromParam::readBoxesFromParam()
+{
   XmlRpc::XmlRpcValue config;
-  if (!nh_.getParam("inbound/boxes",config))
+  if (!nh_.getParam("/inbound/boxes",config))
   {
-    ROS_ERROR("unable to find inboud/boxed");
+    ROS_ERROR("Unable to find /inboud/boxes");
     return false;
   }
 
@@ -64,7 +69,10 @@ bool InboundFromParam::readBoxesFromParam()
     ROS_ERROR("The param is not a list of boxed" );
     return false;
   }
-  ROS_DEBUG("there are %zu boxes",config.size());
+
+  std::vector<manipulation_msgs::Box> boxes;
+
+  ROS_INFO("There are %u boxes",config.size());
   for(size_t i=0; i < config.size(); i++)
   {
     XmlRpc::XmlRpcValue box = config[i];
@@ -73,30 +81,30 @@ bool InboundFromParam::readBoxesFromParam()
       ROS_WARN("The element #%zu is not a struct", i);
       continue;
     }
+
     if( !box.hasMember("name") )
     {
       ROS_WARN("The element #%zu has not the field 'name'", i);
       continue;
     }
-    std::string box_name=rosparam_utilities::toString(box["name"]);
+    std::string box_name = rosparam_utilities::toString(box["name"]);
+    ROS_INFO("Found box named: %s",box_name.c_str());
 
     if( !box.hasMember("frame") )
     {
       ROS_WARN("The element #%zu has not the field 'frame'", i);
       continue;
     }
-    std::string frame_name=rosparam_utilities::toString(box["frame"]);
+    std::string frame_name = rosparam_utilities::toString(box["frame"]);
+    ROS_INFO("Found box frame name: %s",frame_name.c_str());
 
-
-    ROS_DEBUG("box named =%s",box_name.c_str());
     if( !box.hasMember("heigth") )
     {
-      ROS_WARN("The element #%zu has not the field 'heigth'", i);
+      ROS_WARN("The element #%zu has not the field 'height'", i);
       continue;
     }
-
-    double heigth=rosparam_utilities::toDouble(box["heigth"]);
-    ROS_DEBUG("box picking heigth %f",heigth);
+    double height = rosparam_utilities::toDouble(box["heigth"]);
+    ROS_DEBUG("Box picking heigth %f",height);
 
     if( !box.hasMember("quaternion") )
     {
@@ -125,30 +133,27 @@ bool InboundFromParam::readBoxesFromParam()
                          quaternion.at(1),
                          quaternion.at(2));
 
-
-
     Eigen::Affine3d T_frame_box;
-    T_frame_box=q;
-    T_frame_box.translation()(0)=position.at(0);
-    T_frame_box.translation()(1)=position.at(1);
-    T_frame_box.translation()(2)=position.at(2);
-
-
+    T_frame_box = q;
+    T_frame_box.translation()(0) = position.at(0);
+    T_frame_box.translation()(1) = position.at(1);
+    T_frame_box.translation()(2) = position.at(2);
 
     tf::TransformListener listener;
     tf::StampedTransform transform;
-    ros::Time t0=ros::Time::now();
+    ros::Time t0 = ros::Time::now();
     if (!listener.waitForTransform("world",frame_name,t0,ros::Duration(10)))
     {
       ROS_WARN("Unable to find a transform from world to %s", frame_name.c_str());
       continue;
     }
 
-    try{
-      listener.lookupTransform("world",frame_name,
-                               t0, transform);
+    try
+    {
+      listener.lookupTransform("world", frame_name, t0, transform);
     }
-    catch (tf::TransformException ex){
+    catch (tf::TransformException ex)
+    {
       ROS_ERROR("%s",ex.what());
       ros::Duration(1.0).sleep();
       continue;
@@ -157,32 +162,42 @@ bool InboundFromParam::readBoxesFromParam()
     Eigen::Affine3d T_w_frame;
     tf::poseTFToEigen(transform,T_w_frame);
 
-    Eigen::Affine3d T_w_box=T_w_frame*T_frame_box;
+    Eigen::Affine3d T_w_box = T_w_frame * T_frame_box;
 
-
-    manipulation_msgs::AddBox box_srv;
-    box_srv.request.inbound_box_name=box_name;
-    tf::poseEigenToMsg(T_w_box,box_srv.request.box_pose);
-    ROS_DEBUG_STREAM("Box position in world frame\n"<<box_srv.request.box_pose);
-    box_srv.request.height=heigth;
-    if (!add_box_client_.call(box_srv))
-      return false;
-
-
+    manipulation_msgs::Box box_;
+    box_.name = box_name;
+    box_.height = height;
+    box_.location.name = box_.name+"_location";
+    box_.location.frame = "world";
+    tf::poseEigenToMsg(T_w_box,box_.location.pose);
+    boxes.push_back(box_);
   }
 
+  if (boxes.size()!=0)
+  {
+    manipulation_msgs::AddBoxes add_boxes_srv;
+    add_boxes_srv.request.add_boxes = boxes;
+
+    if (!add_box_client_.call(add_boxes_srv))
+      return false;
+
+    ROS_INFO("Added %lu boxes.", boxes.size());  
+  }
+  else
+    ROS_WARN("Can't add any box to the location manager.");
+  
+  
   return true;
 }
 
 
-
-bool InboundFromParam::readObjectFromParam()
+bool InboundPickFromParam::readObjectFromParam()
 {
 
   XmlRpc::XmlRpcValue config;
-  if (!nh_.getParam("inbound/objects",config))
+  if (!nh_.getParam("/inbound/objects",config))
   {
-    ROS_ERROR("unable to find inbound/objects");
+    ROS_ERROR("Unable to find /inbound/objects");
     return false;
   }
 
@@ -191,12 +206,10 @@ bool InboundFromParam::readObjectFromParam()
     ROS_ERROR("The param is not a list of boxed" );
     return false;
   }
-  ROS_DEBUG("there are %zu objects",config.size());
-
+  ROS_INFO("There are %d objects",config.size());
 
   object_loader_msgs::addObjects srv;
   std::map<std::string,std::shared_ptr<manipulation_msgs::AddObjects>> add_objs_srv;
-
 
   for(size_t i=0; i < config.size(); i++)
   {
@@ -211,8 +224,8 @@ bool InboundFromParam::readObjectFromParam()
       ROS_WARN("The element #%zu has not the field 'name'", i);
       continue;
     }
-    std::string type=rosparam_utilities::toString(object["type"]);
-
+    std::string type = rosparam_utilities::toString(object["type"]);
+    
     XmlRpc::XmlRpcValue type_config;
     if (!nh_.getParam(type,type_config))
     {
@@ -225,25 +238,24 @@ bool InboundFromParam::readObjectFromParam()
       ROS_WARN("The element #%zu has not the field 'inbound'", i);
       continue;
     }
-    std::string box_name=rosparam_utilities::toString(object["inbound"]);
+    std::string box_name = rosparam_utilities::toString(object["inbound"]);
 
     if (add_objs_srv.count(box_name)==0)
-    {
       add_objs_srv.insert(std::pair<std::string,std::shared_ptr<manipulation_msgs::AddObjects>>(box_name,std::make_shared<manipulation_msgs::AddObjects>()));
-    }
-    add_objs_srv.at(box_name)->request.inbound_box_name=box_name;
+    
+
+    add_objs_srv.at(box_name)->request.box_name = box_name;
     manipulation_msgs::Object obj;
-    obj.type=type;
+    obj.type = type;
 
     if( !object.hasMember("frame") )
     {
       ROS_WARN("The element #%zu has not the field 'frame'", i);
       continue;
     }
-    std::string frame_name=rosparam_utilities::toString(object["frame"]);
+    std::string frame_name = rosparam_utilities::toString(object["frame"]);
 
-
-    ROS_DEBUG("object type =%s, box name =%s, frame=%s",type.c_str(),box_name.c_str(),frame_name.c_str());
+    ROS_INFO("Object type: %s, box name: %s, frame: %s", type.c_str(),box_name.c_str(),frame_name.c_str());
 
 
     std::vector<double> position;
@@ -253,11 +265,11 @@ bool InboundFromParam::readObjectFromParam()
       continue;
     }
 
-
     assert(position.size()==3);
-    obj.pose.position.x=position.at(0);
-    obj.pose.position.y=position.at(1);
-    obj.pose.position.z=position.at(2);
+    //////////////// Not anymore necessary /////////////////
+    // obj.pose.position.x = position.at(0);
+    // obj.pose.position.y = position.at(1);
+    // obj.pose.position.z = position.at(2);
 
     std::vector<double> quaternion;
     if( !rosparam_utilities::getParamVector(object,"quaternion",quaternion) )
@@ -266,7 +278,6 @@ bool InboundFromParam::readObjectFromParam()
       continue;
     }
     assert(quaternion.size()==4);
-
 
     tf::TransformListener listener;
     tf::StampedTransform transform;
@@ -277,11 +288,12 @@ bool InboundFromParam::readObjectFromParam()
       continue;
     }
 
-    try{
-      listener.lookupTransform("world",frame_name,
-                               t0, transform);
+    try
+    {
+      listener.lookupTransform("world",frame_name,t0,transform);
     }
-    catch (tf::TransformException ex){
+    catch (tf::TransformException ex)
+    {
       ROS_ERROR("%s",ex.what());
       ros::Duration(1.0).sleep();
       continue;
@@ -290,26 +302,23 @@ bool InboundFromParam::readObjectFromParam()
     Eigen::Affine3d T_w_frame;
     tf::poseTFToEigen(transform,T_w_frame);
 
-
     Eigen::Quaterniond q(quaternion.at(3),
                          quaternion.at(0),
                          quaternion.at(1),
                          quaternion.at(2));
     Eigen::Affine3d T_frame_object;
-    T_frame_object=q;
-    T_frame_object.translation()(0)=position.at(0);
-    T_frame_object.translation()(1)=position.at(1);
-    T_frame_object.translation()(2)=position.at(2);
+    T_frame_object = q;
+    T_frame_object.translation()(0) = position.at(0);
+    T_frame_object.translation()(1) = position.at(1);
+    T_frame_object.translation()(2) = position.at(2);
 
-    Eigen::Affine3d T_w_object=T_w_frame*T_frame_object;
+    Eigen::Affine3d T_w_object = T_w_frame * T_frame_object;
 
-    tf::poseEigenToMsg(T_w_object,obj.pose);
+    //////////////// Not anymore necessary /////////////////
+    //tf::poseEigenToMsg(T_w_object,obj.pose);
 
 
     manipulation_msgs::Grasp grasp_obj;
-
-
-
 
     if( !type_config.hasMember("grasp_poses") )
     {
@@ -327,7 +336,7 @@ bool InboundFromParam::readObjectFromParam()
 
       if( !pose.hasMember("tool") )
       {
-        ROS_WARN("The element #%zu has not the field 'tool'", ig);
+        ROS_WARN("The element #%u has not the field 'tool'", ig);
         continue;
       }
       std::string tool_name=rosparam_utilities::toString(pose["tool"]);
@@ -336,7 +345,7 @@ bool InboundFromParam::readObjectFromParam()
       std::vector<double> position;
       if( !rosparam_utilities::getParamVector(pose,"position",position) )
       {
-        ROS_WARN("The element #%zu has not the field 'name'", ig);
+        ROS_WARN("The element #%u has not the field 'name'", ig);
         continue;
       }
       assert(position.size()==3);
@@ -355,23 +364,26 @@ bool InboundFromParam::readObjectFromParam()
                            quaternion.at(2));
 
       Eigen::Affine3d T_obj_grasp;
-      T_obj_grasp=q;
-      T_obj_grasp.translation()(0)=position.at(0);
-      T_obj_grasp.translation()(1)=position.at(1);
-      T_obj_grasp.translation()(2)=position.at(2);
+      T_obj_grasp = q;
+      T_obj_grasp.translation()(0) = position.at(0);
+      T_obj_grasp.translation()(1) = position.at(1);
+      T_obj_grasp.translation()(2) = position.at(2);
 
-      Eigen::Affine3d T_w_grasp=T_w_object*T_obj_grasp;
+      Eigen::Affine3d T_w_grasp = T_w_object * T_obj_grasp;
+ 
+      grasp_obj.location.name = obj.name+std::to_string(ig)+"_location";
+      grasp_obj.location.frame = "world";
 
       manipulation_msgs::Grasp grasp_obj;
-      tf::poseEigenToMsg(T_w_grasp,grasp_obj.pose);
-      grasp_obj.tool_name=tool_name;
-      obj.grasping_poses.push_back(grasp_obj);
+      tf::poseEigenToMsg(T_w_grasp,grasp_obj.location.pose);
+      grasp_obj.tool_name = tool_name;
+      obj.grasping_locations.push_back(grasp_obj);
     }
 
     object_loader_msgs::object col_obj;
     tf::poseEigenToMsg(T_w_object,col_obj.pose.pose);
-    col_obj.pose.header.frame_id="world";
-    col_obj.object_type=type;
+    col_obj.pose.header.frame_id = "world";
+    col_obj.object_type = type;
     srv.request.objects.push_back(col_obj);
 
     if (!add_col_objs_client_.call(srv))
@@ -385,7 +397,7 @@ bool InboundFromParam::readObjectFromParam()
       return false;
     }
 
-    obj.id=srv.response.ids.at(0);
+    obj.name = srv.response.ids.at(0);
     add_objs_srv.at(box_name)->request.add_objects.push_back(obj);
 
     srv.request.objects.clear();

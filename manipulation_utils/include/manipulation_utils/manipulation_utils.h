@@ -26,6 +26,8 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <ros/ros.h>
+
 #include <manipulation_msgs/Grasp.h>
 #include <manipulation_msgs/Object.h>
 #include <manipulation_msgs/Box.h>
@@ -41,19 +43,29 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace manipulation 
 {
 
-  /* remove a grasp location from the location manager
+  /* add a grasp location from the location manager
   */
-  bool removeLocation(const std::string& location_name);
+  bool addLocation( const ros::NodeHandle& nh,
+                    const manipulation_msgs::Location& location_name);
+
+  /* remove a grasp loc
+ation from the location manager
+  */
+  bool removeLocation(const ros::NodeHandle& nh,
+                      const std::string& location_name);
   class Grasp
   {
   protected:
     std::string m_tool_name;
     std::string m_location_name;  // to keep trace about the location inserted in the LocationManager
 
+    ros::NodeHandle m_nh;
+
   public:
     /* constructor
     */
-    Grasp(const manipulation_msgs::Grasp& grasp);
+    Grasp(const ros::NodeHandle& nh,
+          const manipulation_msgs::Grasp& grasp);
       
     /* destructor
     */
@@ -76,12 +88,15 @@ namespace manipulation
     std::string m_name;
     std::string m_type;
 
+    ros::NodeHandle m_nh;
+
     std::vector<GraspPtr> m_grasp;
   
   public:
     /* constructor
     */
-    Object(const manipulation_msgs::Object& object);
+    Object( const ros::NodeHandle& nh,
+            const manipulation_msgs::Object& object);
 
     /* destructor
     */
@@ -112,13 +127,16 @@ namespace manipulation
     std::string m_name;
     double m_height;
     std::string m_location_name;  // to keep trace about the location inserted in the LocationManager
+    
+    ros::NodeHandle m_nh;
 
     std::map<std::string,ObjectPtr> m_objects;
 
   public:
     /* constructor
     */
-    Box(const manipulation_msgs::Box& box);
+    Box(const ros::NodeHandle& nh,
+        const manipulation_msgs::Box& box);
 
     /* destructor
     */
@@ -171,7 +189,6 @@ namespace manipulation
     /* get the location name
     */
     std::string getLocationName(){return m_location_name;}
-
 
   };
   typedef std::shared_ptr<Box> BoxPtr;
