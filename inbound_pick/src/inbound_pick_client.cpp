@@ -11,7 +11,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "inbound_pick_client");
   ros::NodeHandle nh;
 
-  actionlib::SimpleActionClient<manipulation_msgs::PickObjectsAction> pick_ac("/manipulator/pick");
+  actionlib::SimpleActionClient<manipulation_msgs::PickObjectsAction> pick_ac("/inbound_pick_server/manipulator/pick");
   ROS_INFO("Waiting for pick server");
   pick_ac.waitForServer();
   ROS_INFO("Connection ok");

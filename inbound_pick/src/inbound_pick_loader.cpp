@@ -31,11 +31,11 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  // if (!inb->readObjectFromParam())
-  // {
-  //   ROS_ERROR("Unable to load objects in the boxes");
-  //   return 0;
-  // }
+  if (!inb->readObjectFromParam())
+  {
+    ROS_ERROR("Unable to load objects in the boxes");
+    return 0;
+  }
 
   ROS_INFO("Inbound boxed loaded");
 

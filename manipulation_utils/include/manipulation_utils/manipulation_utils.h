@@ -32,21 +32,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <manipulation_msgs/Object.h>
 #include <manipulation_msgs/Box.h>
 
-//#define ROS_PROTO(...) ROS_LOG(::ros::console::levels::Debug, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
-//#define ROS_PROTO_STREAM(...) ROS_LOG_STREAM(::ros::console::levels::Debug, ROSCONSOLE_DEFAULT_NAME, __VA_ARGS__)
-
-  // To be checked
-#define N_MAX_ITER 2000
-#define N_ITER 30
-#define TOLERANCE 1e-6
-
 namespace manipulation 
 {
 
   /* add a grasp location from the location manager
   */
   bool addLocation( const ros::NodeHandle& nh,
-                    const manipulation_msgs::Location& location_name);
+                    const std::string& location_name);
 
   /* remove a grasp loc
 ation from the location manager
@@ -56,6 +48,7 @@ ation from the location manager
   class Grasp
   {
   protected:
+    bool m_int_state;
     std::string m_tool_name;
     std::string m_location_name;  // to keep trace about the location inserted in the LocationManager
 
@@ -79,12 +72,17 @@ ation from the location manager
     */
     std::string getLocationName(){return m_location_name;}
 
+    /* get object internal state
+    */
+    bool getIntState(){return m_int_state;}
+
   };
   typedef std::shared_ptr<Grasp> GraspPtr;
 
   class Object 
   {
   protected:
+    bool m_int_state;
     std::string m_name;
     std::string m_type;
 
@@ -118,12 +116,17 @@ ation from the location manager
     */
     std::string getType(){return m_type;}
 
+    /* get object internal state
+    */
+    bool getIntState(){return m_int_state;}
+
   };
   typedef std::shared_ptr<Object> ObjectPtr;
 
   class Box
   {
   protected:
+    bool m_int_state;
     std::string m_name;
     double m_height;
     std::string m_location_name;  // to keep trace about the location inserted in the LocationManager
@@ -189,6 +192,10 @@ ation from the location manager
     /* get the location name
     */
     std::string getLocationName(){return m_location_name;}
+
+    /* get object internal state
+    */
+    bool getIntState(){return m_int_state;}
 
   };
   typedef std::shared_ptr<Box> BoxPtr;

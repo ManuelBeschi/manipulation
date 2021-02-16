@@ -63,10 +63,25 @@ namespace manipulation
     control_msgs::FollowJointTrajectoryGoal goal;
     goal.trajectory = plan.trajectory_.joint_trajectory;
 
+    if (m_fjt_result.find(group_name) == m_fjt_result.end())
+    {
+      ROS_ERROR("Can't find FollowJointTrajectory result for group %s", group_name.c_str());
+      return false;
+    }
+      
     m_fjt_result.at(group_name) = std::nan("1");
+
     auto cb = boost::bind(&manipulation::SkillBase::doneCb,this,_1,_2,group_name);
+    
+    if (m_fjt_clients.find(group_name) == m_fjt_clients.end())
+    {
+      ROS_ERROR("Can't find FollowJointTrajectory client for group %s", group_name.c_str());
+      return false;
+    }
+
     m_fjt_clients.at(group_name)->sendGoal(goal, cb);
 
+    ROS_INFO("Execution done!");
     return true;
   }
 
@@ -92,10 +107,17 @@ namespace manipulation
                           const control_msgs::FollowJointTrajectoryResultConstPtr& result,
                           const std::string& group_name)
   {
+    if (m_fjt_result.find(group_name) == m_fjt_result.end())
+    {
+      ROS_ERROR("Can't find FollowJointTrajectory result for group %s", group_name.c_str());
+      return;
+    }
+
     m_fjt_result.at(group_name) = result->error_code;
+    
     if (result->error_code < 0)
     {
-      ROS_ERROR("error executing %s/follow_joint_trajectory: %s",
+      ROS_ERROR("Error executing %s/follow_joint_trajectory: %s",
                 group_name.c_str(),result->error_string.c_str() );
     }
     return;

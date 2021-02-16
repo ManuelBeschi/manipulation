@@ -167,7 +167,7 @@ bool InboundPickFromParam::readBoxesFromParam()
     manipulation_msgs::Box box_;
     box_.name = box_name;
     box_.height = height;
-    box_.location.name = box_.name+"_location";
+    box_.location.name = box_.name;
     box_.location.frame = "world";
     tf::poseEigenToMsg(T_w_box,box_.location.pose);
     boxes.push_back(box_);
@@ -221,13 +221,13 @@ bool InboundPickFromParam::readObjectFromParam()
     }
     if( !object.hasMember("type") )
     {
-      ROS_WARN("The element #%zu has not the field 'name'", i);
+      ROS_WARN("The element #%zu has not the field 'type'", i);
       continue;
     }
     std::string type = rosparam_utilities::toString(object["type"]);
     
     XmlRpc::XmlRpcValue type_config;
-    if (!nh_.getParam(type,type_config))
+    if (!nh_.getParam("/" + type,type_config))
     {
       ROS_WARN("Type %s does not exist",type.c_str());
       continue;
@@ -247,6 +247,7 @@ bool InboundPickFromParam::readObjectFromParam()
     add_objs_srv.at(box_name)->request.box_name = box_name;
     manipulation_msgs::Object obj;
     obj.type = type;
+    obj.name = type + std::to_string(i);
 
     if( !object.hasMember("frame") )
     {
@@ -281,7 +282,7 @@ bool InboundPickFromParam::readObjectFromParam()
 
     tf::TransformListener listener;
     tf::StampedTransform transform;
-    ros::Time t0=ros::Time::now();
+    ros::Time t0 = ros::Time::now();
     if (!listener.waitForTransform("world",frame_name,t0,ros::Duration(10)))
     {
       ROS_WARN("Unable to find a transform from world to %s", frame_name.c_str());
@@ -313,10 +314,6 @@ bool InboundPickFromParam::readObjectFromParam()
     T_frame_object.translation()(2) = position.at(2);
 
     Eigen::Affine3d T_w_object = T_w_frame * T_frame_object;
-
-    //////////////// Not anymore necessary /////////////////
-    //tf::poseEigenToMsg(T_w_object,obj.pose);
-
 
     manipulation_msgs::Grasp grasp_obj;
 
@@ -371,10 +368,9 @@ bool InboundPickFromParam::readObjectFromParam()
 
       Eigen::Affine3d T_w_grasp = T_w_object * T_obj_grasp;
  
-      grasp_obj.location.name = obj.name+std::to_string(ig)+"_location";
+      grasp_obj.location.name = obj.name+"_gl"+std::to_string(ig);
       grasp_obj.location.frame = "world";
 
-      manipulation_msgs::Grasp grasp_obj;
       tf::poseEigenToMsg(T_w_grasp,grasp_obj.location.pose);
       grasp_obj.tool_name = tool_name;
       obj.grasping_locations.push_back(grasp_obj);
@@ -397,12 +393,10 @@ bool InboundPickFromParam::readObjectFromParam()
       return false;
     }
 
-    obj.name = srv.response.ids.at(0);
     add_objs_srv.at(box_name)->request.add_objects.push_back(obj);
-
     srv.request.objects.clear();
-
   }
+
   for (const std::pair<std::string,std::shared_ptr<manipulation_msgs::AddObjects>>& p: add_objs_srv)
     add_objs_client_.call(*p.second);
 

@@ -45,8 +45,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <manipulation_utils/skill_base.h>
 #include <manipulation_utils/manipulation_utils.h>
 
-#include <control_msgs/FollowJointTrajectoryAction.h>
-
 namespace manipulation
 {
 
@@ -77,8 +75,6 @@ namespace manipulation
       ros::ServiceClient m_attach_object_srv;
 
       std::map<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>>> m_pick_servers;
-      std::map<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>> m_fjt_clients;
-
   
     public:
       PickObjects(const ros::NodeHandle& m_nh,

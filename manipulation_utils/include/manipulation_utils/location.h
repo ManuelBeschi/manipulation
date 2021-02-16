@@ -33,6 +33,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <actionlib/server/simple_action_server.h>
 
+#include <control_msgs/FollowJointTrajectoryAction.h>
+
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <eigen_conversions/eigen_msg.h>
@@ -60,10 +62,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <tf_conversions/tf_eigen.h>
 
-#define N_ITER 30
-#define N_MAX_ITER 2000
-#define TOLERANCE 1e-6
-
+#define N_ITER 200
+#define N_MAX_ITER 20000
+#define TOLERANCE 1e-3
 namespace manipulation 
 {
 
@@ -167,13 +168,16 @@ protected:
   ros::ServiceServer m_add_locations_srv;
   ros::ServiceServer m_remove_locations_srv;
 
+  std::map<std::string,std::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>> m_fjt_clients;
+
   bool addLocationFromMsg(const manipulation_msgs::Location& location);
 
   bool removeLocation(const std::string& location_name);
 
-  std::vector<Eigen::VectorXd> getIkSolForLocation( const std::string& location_name,
-                                                    const Location::Destination& destination,
-                                                    const std::string& group_name);
+  bool getIkSolForLocation( const std::string& location_name,
+                            const Location::Destination& destination,
+                            const std::string& group_name,
+                            std::vector<Eigen::VectorXd>& jconf_single_location);
 
   double computeDistanceBetweenLocations( const std::string& location_name,
                                           const std::string& group_name,
