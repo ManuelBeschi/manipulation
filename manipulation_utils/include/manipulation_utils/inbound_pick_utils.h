@@ -41,7 +41,8 @@ namespace manipulation
     ros::NodeHandle nh_;
     ros::ServiceClient add_objs_client_;
     ros::ServiceClient add_box_client_;
-    ros::ServiceClient add_col_objs_client_;
+    ros::ServiceClient add_objs_to_scene_client_;
+
   public:
     InboundPickFromParam(const ros::NodeHandle& nh);
     bool readBoxesFromParam();

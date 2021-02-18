@@ -44,14 +44,16 @@ InboundPickFromParam::InboundPickFromParam( const ros::NodeHandle &nh):
 {
   add_objs_client_ = nh_.serviceClient<manipulation_msgs::AddObjects>("add_objects");
   add_box_client_ = nh_.serviceClient<manipulation_msgs::AddBoxes>("add_boxes");
-  add_col_objs_client_ = nh_.serviceClient<object_loader_msgs::addObjects>("/add_object_to_scene");
-  ROS_INFO("Scene spawner is waiting %s", add_col_objs_client_.getService().c_str());
-  add_col_objs_client_.waitForExistence();
-  ROS_INFO("Reading object to spawn");
+  add_objs_to_scene_client_ = nh_.serviceClient<object_loader_msgs::addObjects>("/add_object_to_scene");
+  
+  ROS_INFO("Scene spawner is waiting %s", add_objs_client_.getService().c_str());
+  add_objs_client_.waitForExistence();
 
   ROS_INFO("Waiting for pick server");
   add_box_client_.waitForExistence();
-  ROS_INFO("Connection ok");
+
+  ROS_INFO("Scene spawner is waiting %s", add_objs_to_scene_client_.getService().c_str());
+  add_objs_to_scene_client_.waitForExistence();
 
 }
 
@@ -247,7 +249,7 @@ bool InboundPickFromParam::readObjectFromParam()
     add_objs_srv.at(box_name)->request.box_name = box_name;
     manipulation_msgs::Object obj;
     obj.type = type;
-    obj.name = type + std::to_string(i);
+    obj.name = type + "_" + std::to_string(i);
 
     if( !object.hasMember("frame") )
     {
@@ -267,10 +269,6 @@ bool InboundPickFromParam::readObjectFromParam()
     }
 
     assert(position.size()==3);
-    //////////////// Not anymore necessary /////////////////
-    // obj.pose.position.x = position.at(0);
-    // obj.pose.position.y = position.at(1);
-    // obj.pose.position.z = position.at(2);
 
     std::vector<double> quaternion;
     if( !rosparam_utilities::getParamVector(object,"quaternion",quaternion) )
@@ -382,14 +380,15 @@ bool InboundPickFromParam::readObjectFromParam()
     col_obj.object_type = type;
     srv.request.objects.push_back(col_obj);
 
-    if (!add_col_objs_client_.call(srv))
+    if (!add_objs_to_scene_client_.call(srv))
     {
-      ROS_ERROR("sometimes wrong when adding collision object");
+      ROS_ERROR("Something wrong when adding collision object");
       return false;
     }
+
     if (!srv.response.success)
     {
-      ROS_ERROR("sometimes wrong when adding collision object");
+      ROS_ERROR("Something wrong when adding collision object");
       return false;
     }
 

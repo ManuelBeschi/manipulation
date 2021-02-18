@@ -649,5 +649,16 @@ bool LocationManager::ik(const std::string& group_name,
   return found;
 }
 
+void LocationManager::updatePlanningScene(const moveit_msgs::PlanningScene& scene)
+{
+  //m_scene_mtx.lock();
+  for (const std::string& group: m_group_names)
+  {
+    if (!m_planning_scene.at(group)->setPlanningSceneMsg(scene))
+      ROS_ERROR("unable to update planning scene");
+  }
+  //m_scene_mtx.unlock();
+}                    
+
 }  // end namespace manipulation
 

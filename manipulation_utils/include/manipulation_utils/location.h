@@ -139,6 +139,8 @@ public:
                                                               Eigen::VectorXd& final_configuration,
                                                               std::string& location_name );
 
+  void updatePlanningScene(const moveit_msgs::PlanningScene& scene);
+
 protected:
   ros::NodeHandle m_nh;
 

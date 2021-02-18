@@ -17,6 +17,10 @@ int main(int argc, char **argv)
 
   ROS_INFO("Creating PickOject server...");
 
+  ros::ServiceClient ps_client = nh.serviceClient<moveit_msgs::GetPlanningScene>("/get_planning_scene");
+  ps_client.waitForExistence();
+  moveit_msgs::GetPlanningScene ps_srv;
+
   manipulation::PickObjects pick(nh,pnh);
 
   if (!pick.init())
@@ -30,6 +34,11 @@ int main(int argc, char **argv)
   ros::Rate lp(10);
   while (ros::ok())
   {
+    if (!ps_client.call(ps_srv))
+      ROS_ERROR("Error on  get_planning_scene srv not ok");
+    else
+      pick.updatePlanningScene(ps_srv.response.scene);
+    
     lp.sleep();
     pick.publishTF();
   }

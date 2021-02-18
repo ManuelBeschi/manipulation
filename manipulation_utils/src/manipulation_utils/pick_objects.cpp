@@ -56,7 +56,7 @@ namespace manipulation
     m_list_objects_srv = m_pnh.advertiseService("list_objects",&PickObjects::listObjectsCb,this);
     m_reset_srv = m_pnh.advertiseService("inboud/reset_box",&PickObjects::resetBoxesCb,this);
 
-    m_attach_object_srv = m_pnh.serviceClient<object_loader_msgs::attachObject>("attach_object_to_link");
+    m_attach_object_srv = m_nh.serviceClient<object_loader_msgs::attachObject>("attach_object_to_link");
 
     for (const std::string& group_name: m_group_names)
     { 
@@ -299,7 +299,6 @@ namespace manipulation
         return;
       }
 
-
       // Plan to best Object (grasp) New 2020.01.25
       std::vector<std::string> possible_object_location_names;
 
@@ -329,20 +328,8 @@ namespace manipulation
       Eigen::VectorXd object_grasp_jconf;
       std::vector<std::string> possible_objects;
 
-      // manipulation::ObjectPtr selected_object;
-      //manipulation::GraspPtr selected_grasp_pose;
-
       t_planning_init = ros::Time::now();
-      // selected_box->getMutex().lock();
-      // plan = planToObject(group_name,
-      //                     type_names,
-      //                     selected_box,
-      //                     approach_jconf,
-      //                     tool_name,
-      //                     result,
-      //                     selected_object,
-      //                     selected_grasp_pose
-      //
+
       ROS_INFO("Planning to object picking position. Group %s, Box name %s",group_name.c_str(), best_box_name.c_str());
       plan = planTo(group_name,
                     possible_object_location_names,
@@ -434,15 +421,15 @@ namespace manipulation
       if (!m_attach_object_srv.call(attach_srv))
       {
         action_res.result = manipulation_msgs::PickObjectsResult::NoObjectsFound;
-        ROS_ERROR("unaspected error calling %s service",m_attach_object_srv.getService().c_str());
+        ROS_ERROR("Unaspected error calling %s service",m_attach_object_srv.getService().c_str());
         as->setAborted(action_res,"unaspected error calling attach server");
         return;
       }
       if (!attach_srv.response.success)
       {
         action_res.result = manipulation_msgs::PickObjectsResult::NoObjectsFound;
-        ROS_ERROR("unable to attach object");
-        as->setAborted(action_res,"unable to attach object");
+        ROS_ERROR("Unable to attach object");
+        as->setAborted(action_res,"Unable to attach object");
         return;
       }
 
@@ -470,13 +457,6 @@ namespace manipulation
       t_planning_init = ros::Time::now();
 
       ROS_INFO("Planning to leave position after object picking. Group %s",group_name.c_str());
-      // moveit::planning_interface::MoveGroupInterface::Plan return_plan=planToApproachSlot(group_name,
-      //                                                                                     selected_grasp_pose->getConfiguration(),
-      //                                                                                     T_w_approach,
-      //                                                                                     selected_object,
-      //                                                                                     selected_grasp_pose,
-      //                                                                                     result,
-      //                                                                                     approach_jconf);
 
       plan = planTo(group_name,
                     best_object_location_names,
@@ -554,5 +534,6 @@ namespace manipulation
       ROS_ERROR("Exception thrown while publishing TF: %s",ex.what());
       return;
     }
-  }                    
+  }
+
 }
