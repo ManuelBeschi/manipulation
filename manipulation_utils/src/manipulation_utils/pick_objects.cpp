@@ -57,6 +57,7 @@ namespace manipulation
     m_reset_srv = m_pnh.advertiseService("inboud/reset_box",&PickObjects::resetBoxesCb,this);
 
     m_attach_object_srv = m_nh.serviceClient<object_loader_msgs::attachObject>("attach_object_to_link");
+    m_attach_object_srv.waitForExistence();
 
     for (const std::string& group_name: m_group_names)
     { 
@@ -228,7 +229,7 @@ namespace manipulation
       {
         action_res.result = manipulation_msgs::PickObjectsResult::NoInboundBoxFound;
         ROS_ERROR("No objects found");
-        as->setAborted(action_res,"No objects found");
+        as->setAborted(action_res,"no objects found");
         return;
       }
 
@@ -257,6 +258,7 @@ namespace manipulation
                                                                           possible_boxes_names,
                                                                           Location::Destination::Approach,
                                                                           actual_jconf,
+                                                                          actual_jconf,
                                                                           result,
                                                                           box_approach_jconf,
                                                                           best_box_name);
@@ -268,7 +270,7 @@ namespace manipulation
       {
         action_res.result = manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
         ROS_ERROR("error in plan to best box, code = %d",result.val);
-        as->setAborted(action_res,"Error in planning to the box");
+        as->setAborted(action_res,"error in planning to the box");
         return;
       }
 
@@ -295,7 +297,7 @@ namespace manipulation
       {
         action_res.result = manipulation_msgs::PickObjectsResult::TrajectoryError;
         ROS_ERROR("Error while executing trajectory");
-        as->setAborted(action_res,"Error while executing trajectory.");
+        as->setAborted(action_res,"error while executing trajectory.");
         return;
       }
 
@@ -320,7 +322,7 @@ namespace manipulation
       {
         action_res.result = manipulation_msgs::PickObjectsResult::NoObjectsFound;
         ROS_ERROR("Can't find any object location names in the location manager.");
-        as->setAborted(action_res,"Error in planning to the object");
+        as->setAborted(action_res,"error in planning to the object");
         return;
       }
 
@@ -335,9 +337,20 @@ namespace manipulation
                     possible_object_location_names,
                     Location::Destination::To,
                     box_approach_jconf,
+                    box_approach_jconf,
                     result,
                     object_grasp_jconf,
                     best_object_location_name);
+      //
+
+      if (!result)
+      {
+        action_res.result = manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
+        ROS_ERROR("Group %s: error in plan to best object in the box %s, code = %d", group_name.c_str(), best_box_name.c_str(), result.val);
+        as->setAborted(action_res,"error in planning to object");
+        //selected_box->getMutex().unlock();
+        return;
+      }
 
       std::string best_object_name = selected_box->findObjectByGraspingLocation(best_object_location_name);
       manipulation::ObjectPtr selected_object = selected_box->getObject(best_object_name);
@@ -352,17 +365,6 @@ namespace manipulation
 
       tf::transformEigenToTF(m_locations.at(selected_grasp_pose->getLocationName())->getLeave(), transform);
       m_tf.insert(std::pair<std::string,tf::Transform>("pick/leave/"+selected_object->getName(),transform));
-
-      //
-
-      if (!result)
-      {
-        action_res.result = manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
-        ROS_ERROR("Group %s: error in plan to best object in the box %s, code = %d", group_name.c_str(), best_box_name.c_str(), result.val);
-        as->setAborted(action_res,"error in planning to object");
-        //selected_box->getMutex().unlock();
-        return;
-      }
 
       t_planning = ros::Time::now();
       action_res.planning_duration += (t_planning-t_planning_init);
@@ -397,7 +399,7 @@ namespace manipulation
       {
         action_res.result = manipulation_msgs::PickObjectsResult::TrajectoryError;
         ROS_ERROR("Error while executing trajectory");
-        as->setAborted(action_res,"Error while executing trajectory.");
+        as->setAborted(action_res,"error while executing trajectory.");
         return;
       }
 
@@ -429,7 +431,7 @@ namespace manipulation
       {
         action_res.result = manipulation_msgs::PickObjectsResult::NoObjectsFound;
         ROS_ERROR("Unable to attach object");
-        as->setAborted(action_res,"Unable to attach object");
+        as->setAborted(action_res,"unable to attach object");
         return;
       }
 
@@ -441,10 +443,6 @@ namespace manipulation
       ros::Duration(1).sleep();
 
       action_res.grasping_object_duration = (ros::Time::now()-t_grasp_init);
-
-      //Eigen::Affine3d T_w_approach = selected_grasp_pose->getPose();
-      //T_w_approach.translation()(2) += selected_box->getHeight();
-
 
       // Plan to best Leave New 2020.01.25
       Eigen::VectorXd object_leave_jconf;
@@ -461,6 +459,7 @@ namespace manipulation
       plan = planTo(group_name,
                     best_object_location_names,
                     Location::Destination::Leave,
+                    actual_jconf,
                     actual_jconf,
                     result,
                     object_leave_jconf,
@@ -491,7 +490,7 @@ namespace manipulation
       {
         action_res.result = manipulation_msgs::PickObjectsResult::TrajectoryError;
         ROS_ERROR("Error while executing trajectory");
-        as->setAborted(action_res,"Error while executing trajectory.");
+        as->setAborted(action_res,"error while executing trajectory.");
         return;
       }
 
@@ -512,11 +511,11 @@ namespace manipulation
       as->setSucceeded(action_res,"ok");
       return;
     }
-    catch( std::exception& ex)
+    catch(const std::exception& ex )
     {
-      ROS_ERROR("Exception: %s",ex.what());
+      ROS_ERROR("PickObject::PickObjectGoalCb Exception: %s",ex.what());
       action_res.result = manipulation_msgs::PickObjectsResult::UnexpectedError;
-      as->setAborted(action_res,"Exeception");
+      as->setAborted(action_res,"exception");
       return;
     }
 
@@ -531,7 +530,7 @@ namespace manipulation
     }
     catch(const std::exception& ex)
     {
-      ROS_ERROR("Exception thrown while publishing TF: %s",ex.what());
+      ROS_ERROR("PickObject::publishTF Exception thrown while publishing TF: %s",ex.what());
       return;
     }
   }

@@ -62,9 +62,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <tf_conversions/tf_eigen.h>
 
-#define N_ITER 200
 #define N_MAX_ITER 20000
+#define N_ITER 200
 #define TOLERANCE 1e-3
+
 namespace manipulation 
 {
 
@@ -135,15 +136,19 @@ public:
                                                               const std::vector<std::string>& location_names,
                                                               const Location::Destination& destination,
                                                               const Eigen::VectorXd& starting_jconf,
+                                                              const Eigen::VectorXd& preferred_jconf,
                                                               moveit::planning_interface::MoveItErrorCode& result,
                                                               Eigen::VectorXd& final_configuration,
-                                                              std::string& location_name );
+                                                              std::string& plan_to_location_name );
 
   void updatePlanningScene(const moveit_msgs::PlanningScene& scene);
 
 protected:
   ros::NodeHandle m_nh;
 
+  int m_ik_sol_number = 200;
+
+  std::mutex m_scene_mtx; 
   std::map<std::string,LocationPtr> m_locations;
 
   robot_model::RobotModelPtr m_kinematic_model;
@@ -188,7 +193,8 @@ protected:
 
   bool ik(const std::string& group_name,
           const Eigen::Affine3d& T_w_a,
-          std::vector<Eigen::VectorXd >& sols,
+          const std::vector<Eigen::VectorXd>& seed,
+          std::vector<Eigen::VectorXd>& sols,
           unsigned int ntrial = N_ITER);
 
 };

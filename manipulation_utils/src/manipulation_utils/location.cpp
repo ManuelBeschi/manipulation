@@ -33,7 +33,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace manipulation 
 {
 
-
 // Location Class
 Location::Location( const std::string& name,
                     const Eigen::Affine3d& T_w_location,
@@ -131,6 +130,13 @@ bool LocationManager::init()
     m_group_names.push_back(p.first);
   }
 
+  if (!m_nh.getParam("ik_sol_number",m_ik_sol_number))
+  {
+    ROS_WARN("parameter %s/ik_sol_number is not defined, used default value = 200", m_nh.getNamespace().c_str());
+    m_ik_sol_number = 200;
+  }
+
+
   // create groups
   for (const std::string& group_name: m_group_names)
   {
@@ -144,8 +150,8 @@ bool LocationManager::init()
     bool use_single_goal;
     if (!m_nh.getParam(group_name+"/use_single_goal",use_single_goal))
     {
-      ROS_INFO("parameter %s/use_single_goal is not defined, use false (multi goal enable)",m_nh.getNamespace().c_str());
-      use_single_goal=false;
+      ROS_WARN("parameter %s/use_single_goal is not defined, use false (multi goal enable)",m_nh.getNamespace().c_str());
+      use_single_goal = false;
     }
     m_use_single_goal.insert(std::pair<std::string,bool>(group_name,use_single_goal));
 
@@ -289,63 +295,69 @@ bool LocationManager::addLocationFromMsg(const manipulation_msgs::Location& loca
     return false;
   }
 
+  bool get_ik_group = false;
+
   for (const std::pair<std::string,moveit::planning_interface::MoveGroupInterfacePtr>& group: m_groups)
   {
     std::vector<Eigen::VectorXd> sols;
-    std::vector<std::vector<double>> sols_stl;
+    std::vector<Eigen::VectorXd> seed;
 
     if (!m_nh.hasParam("slot_ik/"+location_ptr->m_name+"/"+group.first))
     {
-      if (!ik(group.first,location_ptr->m_T_w_location,sols))
+      if (!ik(group.first,location_ptr->m_T_w_location,seed,sols,m_ik_sol_number))
       {
-        ROS_INFO("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
+        ROS_WARN("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
+
         continue;
       }
 
-      sols_stl.resize(sols.size());
-      for (size_t isolution = 0; isolution < sols.size(); isolution++)
-      {
-        sols_stl.at(isolution).resize(sols.at(isolution).size());
-        for (size_t iax=0; iax<sols.at(isolution).size(); iax++)
-          sols_stl.at(isolution).at(iax) = sols.at(isolution)(iax);
-      }
-      rosparam_utilities::setParam(m_nh,"slot_ik/"+location_ptr->m_name+"/"+group.first,sols_stl);
+      rosparam_utilities::setParam(m_nh,std::string("slot_ik/"+location_ptr->m_name+"/"+group.first),sols);
     }
     else
     {
-      if (!rosparam_utilities::getParamMatrix(m_nh,"slot_ik/"+location_ptr->m_name+"/"+group.first,sols_stl))
+      std::string what;
+      if (!rosparam_utilities::getParam(m_nh,"slot_ik/"+location_ptr->m_name+"/"+group.first,sols,what))
       {
         ROS_ERROR("parameter %s/slot_ik/%s/%s is not correct",m_nh.getNamespace().c_str(),location_ptr->m_name.c_str(),group.first.c_str());
         return false;
       }
-      sols.resize(sols_stl.size());
-      for (size_t isolution = 0; isolution < sols.size(); isolution++)
-      {
-        sols.at(isolution).resize(sols_stl.at(isolution).size());
-        for (size_t iax = 0; iax < sols.at(isolution).size(); iax++)
-          sols.at(isolution)(iax) = sols_stl.at(isolution).at(iax);
-      }
     }
     location_ptr->addLocationIk(group.first,sols);
 
+    if (sols.size() != 0)
+      seed.push_back(sols.at(0));
 
-    if (!ik(group.first,location_ptr->m_T_w_approach,sols))
+    if (!ik(group.first,location_ptr->m_T_w_approach,seed,sols,m_ik_sol_number))
     {
-      ROS_INFO("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
+      ROS_WARN("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
       continue;
     }
     location_ptr->addApproachIk(group.first,sols);
 
 
-    if (!ik(group.first,location_ptr->m_T_w_leave,sols))
+    if (sols.size() != 0)
     {
-      ROS_INFO("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
+      seed.clear();
+      seed.push_back(sols.at(0));
+    }
+      
+    if (!ik(group.first,location_ptr->m_T_w_leave,seed,sols,m_ik_sol_number))
+    {
+      ROS_WARN("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
       continue;
     }
     location_ptr->addLeaveIk(group.first,sols);
+    
+    get_ik_group = true;
   }
 
-  m_locations.insert(std::pair<std::string,LocationPtr>(location_ptr->m_name,location_ptr));
+  if(get_ik_group)
+    m_locations.insert(std::pair<std::string,LocationPtr>(location_ptr->m_name,location_ptr));
+  else
+  {
+    ROS_WARN("The location %s was not added to the location manager", location_ptr->m_name.c_str());
+    return false;
+  }
   
   return true;
 }
@@ -400,107 +412,135 @@ moveit::planning_interface::MoveGroupInterface::Plan LocationManager::planTo( co
                                                                               const std::vector<std::string>& location_names,
                                                                               const Location::Destination& destination,
                                                                               const Eigen::VectorXd& starting_jconf,
+                                                                              const Eigen::VectorXd& preferred_jconf,
                                                                               moveit::planning_interface::MoveItErrorCode& result,
                                                                               Eigen::VectorXd& final_configuration,
-                                                                              std::string& location_name )
+                                                                              std::string& plan_to_location_name )
 {
   moveit::planning_interface::MoveGroupInterface::Plan plan;
-  moveit::planning_interface::MoveGroupInterfacePtr group = m_groups.at(group_name);
-  moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
-  
-  
-  if (!group->startStateMonitor(2))
+
+  try
   {
-    ROS_ERROR("%s: unable to get actual state",m_nh.getNamespace().c_str());
-    result = moveit::planning_interface::MoveItErrorCode::UNABLE_TO_AQUIRE_SENSOR_DATA;
-    return plan;
-  }
+    moveit::planning_interface::MoveGroupInterfacePtr group = m_groups.at(group_name);
+    moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
+    
+    int max_ik_goal_number = m_max_ik_goal_number.at(group_name);
 
-  robot_state::RobotState state = *group->getCurrentState();
-  state.setJointGroupPositions(jmg,starting_jconf);
-  moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
-
-  planning_interface::MotionPlanRequest req;
-  planning_interface::MotionPlanResponse res;
-  req.group_name = group_name;
-  req.start_state = plan.start_state_;
-  req.allowed_planning_time = 5;
-
-  robot_state::RobotState goal_state(m_kinematic_model);
-
-  std::vector<Eigen::VectorXd> sols;
-  for(const std::string& location_name: location_names) 
-  {
-    ROS_INFO("Planning to location: %s", location_name.c_str());
-    std::vector<Eigen::VectorXd> sols_single_location; 
-    if(!getIkSolForLocation(location_name,destination,group_name,sols_single_location))
+    if (!group->startStateMonitor(2))
     {
+      ROS_ERROR("%s: unable to get actual state",m_nh.getNamespace().c_str());
+      result = moveit::planning_interface::MoveItErrorCode::UNABLE_TO_AQUIRE_SENSOR_DATA;
+      return plan;
+    }
+
+    robot_state::RobotState state = *group->getCurrentState();
+    state.setJointGroupPositions(jmg,starting_jconf);
+    moveit::core::robotStateToRobotStateMsg(state,plan.start_state_);
+
+    planning_interface::MotionPlanRequest req;
+    planning_interface::MotionPlanResponse res;
+    req.group_name = group_name;
+    req.start_state = plan.start_state_;
+    req.allowed_planning_time = 5;
+
+    robot_state::RobotState goal_state(m_kinematic_model);
+
+    m_scene_mtx.lock();
+    planning_scene::PlanningScenePtr planning_scene = planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+    m_scene_mtx.unlock();
+
+
+    std::vector<Eigen::VectorXd> sols;
+    for(const std::string& location_name: location_names) 
+    {
+      ROS_INFO("Planning to location: %s", location_name.c_str());
+      std::vector<Eigen::VectorXd> sols_single_location; 
+      if(!getIkSolForLocation(location_name,destination,group_name,sols_single_location))
+      {
+        result = res.error_code_;
+        return plan;
+      }
+
+      sols.insert(sols.end(),sols_single_location.begin(),sols_single_location.end());
+    }
+
+    if (sols.size() == 0)
+    {
+      ROS_WARN("Found %zu solution can't plan trajectory.", sols.size());
+      return plan;
+    }
+
+    std::map<double,Eigen::VectorXd> solutions;
+
+    for (const Eigen::VectorXd& goal: sols)
+    {
+      goal_state.setJointGroupPositions(jmg, goal);
+      goal_state.updateCollisionBodyTransforms();
+      if (!planning_scene->isStateValid(goal_state,group_name))
+        continue;
+
+      double normsol = (goal - preferred_jconf).norm();
+      solutions.insert(std::pair<double,Eigen::VectorXd>(normsol,goal));
+
+      if (m_use_single_goal.at(group_name))
+        break;
+    }
+
+    for (const std::pair<double,Eigen::VectorXd>& p: solutions)
+    {
+      if (req.goal_constraints.size() >= max_ik_goal_number)
+        break;
+      goal_state.setJointGroupPositions(jmg, p.second);
+      moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg);
+      req.goal_constraints.push_back(joint_goal);
+    }
+
+    ROS_INFO("Found %zu solution",solutions.size());
+
+    if (req.goal_constraints.size()==0)
+    {
+      ROS_ERROR("Inbound server: no valid goals");
+      result = res.error_code_;
+      return plan;
+    }
+    ROS_INFO("Adding %zu goals to the Planning Pipeline.",req.goal_constraints.size());
+
+
+    if (!m_planning_pipeline.at(group_name)->generatePlan(planning_scene, req, res))
+    {
+      ROS_ERROR("Could not compute plan successfully");
       result = res.error_code_;
       return plan;
     }
 
-    sols.insert(sols.end(),sols_single_location.begin(),sols_single_location.end());
-  }
+    plan.planning_time_ = res.planning_time_;
+    ROS_INFO("Planning time: %f.",plan.planning_time_);
 
-  if (sols.size()==0)
-  {
-    ROS_WARN("Found %zu solution can't plan trajectory.", sols.size());
-    return plan;
-  }
-  ROS_INFO("Found %zu solution",sols.size());
-    
-  for (const Eigen::VectorXd& goal: sols)
-  {
-    goal_state.setJointGroupPositions(jmg, goal);
-    
-    goal_state.updateCollisionBodyTransforms();
-    if (!m_planning_scene.at(group_name)->isStateValid(goal_state,group_name))
+    res.trajectory_->getRobotTrajectoryMsg(plan.trajectory_);
+    if (res.trajectory_->getWayPointCount()==0)
     {
-      ROS_ERROR("Fail on planning_scene->isStateValid()");
-      continue;
+      ROS_WARN("Trajectory has 0 waypoint");
     }
+    else
+      res.trajectory_->getLastWayPoint().copyJointGroupPositions(jmg,final_configuration);
+
+    result = res.error_code_;
+
+    std::vector<double> min_dist;
+    for(const std::string& location_name: location_names) 
+      min_dist.push_back(computeDistanceBetweenLocations(location_name, group_name, destination, final_configuration));    
     
-    moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, jmg, 0.01);
-    req.goal_constraints.push_back(joint_goal);
-  }
+    plan_to_location_name = location_names.at(std::min_element(min_dist.begin(),min_dist.end()) - min_dist.begin());
+    ROS_INFO("Planning completed. Selected location: %s", plan_to_location_name.c_str());
 
-
-  if (req.goal_constraints.size()==0)
-  {
-    ROS_ERROR("Inbound server: no valid goals");
-    result = res.error_code_;
     return plan;
   }
-  ROS_INFO("Adding %zu goals to the Planning Pipeline.",req.goal_constraints.size());
-
-
-  if (!m_planning_pipeline.at(group_name)->generatePlan(m_planning_scene.at(group_name), req, res))
+  catch(const std::exception& ex)
   {
-    ROS_ERROR("Could not compute plan successfully");
-    result = res.error_code_;
+    ROS_ERROR("LocationManager::planTo Exception: %s",ex.what());
     return plan;
   }
 
-  plan.planning_time_ = res.planning_time_;
-  ROS_INFO("Planning time: %f.",plan.planning_time_);
-
-  res.trajectory_->getRobotTrajectoryMsg(plan.trajectory_);
-  if (res.trajectory_->getWayPointCount()==0)
-  {
-    ROS_WARN("Trajectory has 0 waypoint");
-  }
-  else
-    res.trajectory_->getLastWayPoint().copyJointGroupPositions(jmg,final_configuration);
-  result = res.error_code_;
-
-  std::vector<double> min_dist;
-  for(const std::string& location_name: location_names) 
-    min_dist.push_back(computeDistanceBetweenLocations(location_name, group_name, destination, final_configuration));    
-  
-  location_name = location_names.at(std::min_element(min_dist.begin(),min_dist.end()) - min_dist.begin());
-  ROS_INFO("Planning completed.");
-
-  return plan;
 }
 
 bool LocationManager::getIkSolForLocation(const std::string& location_name,
@@ -561,31 +601,37 @@ double LocationManager::computeDistanceBetweenLocations(const std::string& locat
   }
 }
 
-bool LocationManager::ik(const std::string& group_name,
-                         const Eigen::Affine3d& T_w_a, 
-                         std::vector<Eigen::VectorXd >& sols, 
-                         unsigned int ntrial)
+bool LocationManager::ik( const std::string& group_name,
+                          const Eigen::Affine3d& T_w_a, 
+                          const std::vector<Eigen::VectorXd>& seed,
+                          std::vector<Eigen::VectorXd >& sols, 
+                          unsigned int ntrial)
 {
+  std::map<double,Eigen::VectorXd> solutions;
   moveit::planning_interface::MoveGroupInterfacePtr group = m_groups.at(group_name);
   moveit::core::JointModelGroup* jmg = m_joint_models.at(group_name);
-  
-  std::map<double,Eigen::VectorXd> solutions;
   robot_state::RobotState state = *group->getCurrentState();
   
+  m_scene_mtx.lock();
+  planning_scene::PlanningScenePtr planning_scene = planning_scene::PlanningScene::clone(m_planning_scene.at(group_name));
+  m_scene_mtx.unlock();
+
   Eigen::VectorXd act_joints_conf;
   state.copyJointGroupPositions(group_name,act_joints_conf);
   
-  unsigned int n_seed = sols.size();
+  unsigned int n_seed = seed.size();
   bool found = false;
 
   for (unsigned int iter=0;iter<N_MAX_ITER;iter++)
   {
-    if (solutions.size()>=3*N_ITER)
+    if (solutions.size()>=ntrial)
+      break;
+    if (solutions.size()==0 && iter>ntrial*5)
       break;
 
     if (iter<n_seed)
     {
-      state.setJointGroupPositions(jmg,sols.at(iter));
+      state.setJointGroupPositions(jmg,seed.at(iter));
     }
     else if (iter==n_seed)
     {
@@ -596,22 +642,35 @@ bool LocationManager::ik(const std::string& group_name,
       state.setToRandomPositions();
     }
 
-    if (state.setFromIK(jmg,(Eigen::Isometry3d)T_w_a.matrix()))
+    Eigen::VectorXd js;
+    Eigen::VectorXd start;
+    state.copyJointGroupPositions(group_name,start);
+    if (m_chains.at(group_name)->computeLocalIk(js,T_w_a,start,1e-4,ros::Duration(0.002)))
     {
+      state.setJointGroupPositions(group_name,js);
+
       if (!state.satisfiesBounds())
         continue;
-
+      
       state.updateCollisionBodyTransforms();
-      if (!m_planning_scene.at(group_name)->isStateValid(state))
+      if (!planning_scene->isStateValid(state,group_name))
         continue;
-
-      Eigen::VectorXd js;
-      state.copyJointGroupPositions(group_name,js);
+        
       double dist = (js-act_joints_conf).norm();
       
       if (solutions.size() == 0)
       {
-        solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
+        std::vector<Eigen::VectorXd> multiturn = m_chains.at(group_name)->getMultiplicity(js);
+        for (const Eigen::VectorXd& tmp: multiturn)
+        {
+          state.setJointGroupPositions(group_name,tmp);
+          if (!state.satisfiesBounds())
+            continue;
+
+          double dist = (m_preferred_configuration_weight.at(group_name).cwiseProduct(tmp-m_preferred_configuration.at(group_name))).norm();
+          solutions.insert(std::pair<double,Eigen::VectorXd>(dist,tmp));
+        }
+
         found = true;
       }
       else
@@ -627,37 +686,41 @@ bool LocationManager::ik(const std::string& group_name,
         }
         if (is_diff)
         {
-          solutions.insert(std::pair<double,Eigen::VectorXd>(dist,js));
+          std::vector<Eigen::VectorXd> multiturn = m_chains.at(group_name)->getMultiplicity(js);
+          for (const Eigen::VectorXd& tmp: multiturn)
+          {
+            state.setJointGroupPositions(group_name,tmp);
+            if (!state.satisfiesBounds())
+              continue;
+
+            double dist = (m_preferred_configuration_weight.at(group_name).cwiseProduct( tmp - m_preferred_configuration.at(group_name) )).norm();
+            solutions.insert(std::pair<double,Eigen::VectorXd>(dist,tmp));
+          }
           found = true;
         }
       }
     }
-    else
-    {
-      ROS_DEBUG("unable to find solutions for this seed");
-    }
+    
   }
 
   sols.clear();
   for (const std::pair<double,Eigen::VectorXd>& sol: solutions)
-  {
-    if (sols.size()>=N_ITER)
-      break;
     sols.push_back(sol.second);
-  }
+
+  ROS_INFO("Found %lu solutions for the IK.", sols.size());
 
   return found;
 }
 
 void LocationManager::updatePlanningScene(const moveit_msgs::PlanningScene& scene)
 {
-  //m_scene_mtx.lock();
+  m_scene_mtx.lock();
   for (const std::string& group: m_group_names)
   {
     if (!m_planning_scene.at(group)->setPlanningSceneMsg(scene))
       ROS_ERROR("unable to update planning scene");
   }
-  //m_scene_mtx.unlock();
+  m_scene_mtx.unlock();
 }                    
 
 }  // end namespace manipulation

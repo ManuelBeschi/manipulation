@@ -6,6 +6,7 @@
 #include <manipulation_utils/pick_objects.h>
 #include <manipulation_utils/manipulation_utils.h>
 
+#include <moveit_msgs/GetPlanningScene.h>
 
 int main(int argc, char **argv)
 {
@@ -16,12 +17,12 @@ int main(int argc, char **argv)
   spinner.start();
 
   ROS_INFO("Creating PickOject server...");
+  manipulation::PickObjects pick(nh,pnh);
 
   ros::ServiceClient ps_client = nh.serviceClient<moveit_msgs::GetPlanningScene>("/get_planning_scene");
   ps_client.waitForExistence();
   moveit_msgs::GetPlanningScene ps_srv;
 
-  manipulation::PickObjects pick(nh,pnh);
 
   if (!pick.init())
   {
@@ -38,7 +39,7 @@ int main(int argc, char **argv)
       ROS_ERROR("Error on  get_planning_scene srv not ok");
     else
       pick.updatePlanningScene(ps_srv.response.scene);
-    
+  
     lp.sleep();
     pick.publishTF();
   }
