@@ -28,9 +28,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <ros/ros.h>
 
+#include <manipulation_msgs/Box.h>
 #include <manipulation_msgs/Grasp.h>
 #include <manipulation_msgs/Object.h>
-#include <manipulation_msgs/Box.h>
+#include <manipulation_msgs/Slot.h>
+
 
 namespace manipulation 
 {
@@ -40,11 +42,11 @@ namespace manipulation
   bool addLocation( const ros::NodeHandle& nh,
                     const std::string& location_name);
 
-  /* remove a grasp loc
-ation from the location manager
+  /* remove a grasp location from the location manager
   */
   bool removeLocation(const ros::NodeHandle& nh,
                       const std::string& location_name);
+
   class Grasp
   {
   protected:
@@ -55,7 +57,7 @@ ation from the location manager
     ros::NodeHandle m_nh;
 
   public:
-    /* constructor
+    /* Grasp constructor
     */
     Grasp(const ros::NodeHandle& nh,
           const manipulation_msgs::Grasp& grasp);
@@ -91,7 +93,7 @@ ation from the location manager
     std::vector<GraspPtr> m_grasp;
   
   public:
-    /* constructor
+    /* Object constructor
     */
     Object( const ros::NodeHandle& nh,
             const manipulation_msgs::Object& object);
@@ -136,7 +138,7 @@ ation from the location manager
     std::map<std::string,ObjectPtr> m_objects;
 
   public:
-    /* constructor
+    /* Box constructor
     */
     Box(const ros::NodeHandle& nh,
         const manipulation_msgs::Box& box);
@@ -199,5 +201,61 @@ ation from the location manager
 
   };
   typedef std::shared_ptr<Box> BoxPtr;
+
+
+  class Slot 
+  {
+  protected:
+    bool m_int_state;
+    std::string m_name;
+    int m_slot_size; // m_slot_size < 0 means infinite space
+
+    std::string m_location_name;  // to keep trace about the location inserted in the LocationManager
+    
+    int m_slot_availability;
+
+    ros::NodeHandle m_nh;
+
+  public:
+    /* Slot constructor
+    */
+    Slot( const ros::NodeHandle& nh,
+          const manipulation_msgs::Slot& slot);
+
+    /* destructor
+    */
+    ~Slot();
+
+    /* get the name of the slot
+    */
+    std::string getName(){return m_name;}
+
+    /* get the availability of the slot
+    */
+    bool getSlotAvailability();
+    
+    /* get the location name
+    */
+    std::string getLocationName(){return m_location_name;}
+
+    /* get object internal state
+    */
+    bool getIntState(){return m_int_state;}
+
+    /* add object to slot
+    */
+    void addObjectToSlot();
+
+    /* remove object from slot
+    */
+    void removeObjectFromSlot();
+
+    /* reset object of the slot
+    */
+    void resetSlot();
+
+  };
+  typedef std::shared_ptr<Slot> SlotPtr;
+
 
 }

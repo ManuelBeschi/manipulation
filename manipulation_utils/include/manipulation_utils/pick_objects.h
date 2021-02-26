@@ -29,7 +29,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <std_srvs/SetBool.h> 
 
-#include <tf/transform_broadcaster.h>
 #include <tf_conversions/tf_eigen.h>
 #include <tf/transform_datatypes.h>
 
@@ -47,10 +46,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace manipulation
 {
-
   typedef std::multimap<std::string, Eigen::Affine3d, std::less<std::string>, Eigen::aligned_allocator<std::pair<const std::string, Eigen::Affine3d>>>  PosesMap;
   typedef std::pair<std::string,Eigen::Affine3d>  PosesPair;
-
 
   class PickObjects: public SkillBase
   {
@@ -59,12 +56,8 @@ namespace manipulation
       ros::NodeHandle m_nh;
       ros::NodeHandle m_pnh; 
 
-      std::mutex m_mtx;
-
       std::map<std::string,BoxPtr> m_boxes;
-      std::vector<std::string> m_request_adapters;
 
-      tf::TransformBroadcaster m_broadcaster;
       std::map<std::string,tf::Transform> m_tf;
 
       ros::ServiceServer m_add_obj_srv;
@@ -102,8 +95,6 @@ namespace manipulation
                         
       void pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConstPtr& goal,
                             const std::string& group_name);
-
-      friend std::ostream& operator<<  (std::ostream& os, const PickObjects& pick_objs);
 
       void publishTF();
 

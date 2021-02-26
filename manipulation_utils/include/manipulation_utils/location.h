@@ -146,7 +146,7 @@ public:
 protected:
   ros::NodeHandle m_nh;
 
-  int m_ik_sol_number = 200;
+  int m_ik_sol_number;
 
   std::mutex m_scene_mtx; 
   std::map<std::string,LocationPtr> m_locations;

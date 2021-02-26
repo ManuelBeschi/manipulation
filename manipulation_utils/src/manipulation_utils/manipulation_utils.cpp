@@ -267,4 +267,68 @@ std::vector<ObjectPtr> Box::getObjectsByType(const std::string& object_type)
 
 }
 
+Slot::Slot( const ros::NodeHandle& nh,
+            const manipulation_msgs::Slot& slot):
+            m_nh(nh),
+            m_int_state(true)
+{
+  m_name = slot.name;
+  m_slot_size = slot.slot_size;
+
+  if (m_slot_size > 0)
+    m_slot_availability = m_slot_size;
+  else
+    m_slot_availability = 0;
+
+  if(!addLocation(m_nh,slot.location))
+  {
+    m_int_state = false;
+    return;
+  }
+  
+  m_location_name = slot.location.name;
+  ROS_INFO("Added the new location %s to the location manager.",slot.location.name.c_str());
+
+  return;
+}
+
+Slot::~Slot()
+{
+  if (m_int_state)
+  {
+    if(!removeLocation(m_nh,m_location_name))
+      ROS_ERROR("Can't remove the location %s from location manager.", m_location_name.c_str());
+  }
+}
+
+bool Slot::getSlotAvailability()
+{
+  if (m_slot_size < 0)
+    return true;
+  
+  if (m_slot_availability > 0)
+    return true;
+  else
+    return false;
+    
+}
+
+void Slot::addObjectToSlot()
+{
+  if (m_slot_size > 0 && m_slot_availability > 0)
+    m_slot_availability--;
+}
+
+void Slot::removeObjectFromSlot()
+{
+  if (m_slot_size > 0 && m_slot_availability <= m_slot_size)
+    m_slot_availability++;
+}
+
+void Slot::resetSlot()
+{
+  if (m_slot_size > 0)
+    m_slot_availability = m_slot_size;
+}
+
 }

@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+find_package(Eigen3 REQUIRED)
 
 find_package(catkin REQUIRED COMPONENTS
   manipulation_msgs
@@ -32,6 +33,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
 )
 
 add_library(${PROJECT_NAME}
@@ -39,7 +41,8 @@ add_library(${PROJECT_NAME}
       src/${PROJECT_NAME}/skill_base.cpp
       src/${PROJECT_NAME}/manipulation_utils.cpp 
       src/${PROJECT_NAME}/pick_objects.cpp
-      src/${PROJECT_NAME}/inbound_pick_utils.cpp 
+      src/${PROJECT_NAME}/place_objects.cpp
+      src/${PROJECT_NAME}/manipulation_load_params_utils.cpp 
 )
 add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 

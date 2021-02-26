@@ -13,22 +13,29 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files(
   FILES
-  Location.msg
-  Grasp.msg
-  Object.msg
   Box.msg
+  Grasp.msg
+  Location.msg
+  Object.msg
+  Slot.msg	  
   )
+
 add_service_files(
   FILES
   AddBoxes.srv
   AddObjects.srv
   AddLocations.srv
+  AddSlots.srv
   ListOfObjects.srv
+  RemoveBoxes.srv
   RemoveLocations.srv
   RemoveObjects.srv
-  RemoveBoxes.srv
+  RemoveObjectsFromSlot.srv
+  RemoveSlots.srv
   ResetBoxes.srv
+  ResetSlots.srv
   )
+
 add_action_files(
   FILES
   PickObjects.action

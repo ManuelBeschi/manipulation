@@ -29,24 +29,18 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <ros/ros.h>
 
-#include <manipulation_utils/location.h>
-
-
-#include <manipulation_msgs/AddBoxes.h>
-#include <manipulation_msgs/AddObjects.h>
-#include <manipulation_msgs/AddLocations.h>
-#include <manipulation_msgs/ListOfObjects.h>
+#include <actionlib/client/simple_action_client.h>
+#include <actionlib/server/simple_action_server.h>
 
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <control_msgs/FollowJointTrajectoryGoal.h>
 #include <control_msgs/FollowJointTrajectoryResult.h>
 
-#include <actionlib/client/simple_action_client.h>
-#include <actionlib/server/simple_action_server.h>
+#include <manipulation_utils/location.h>
 
 #include <moveit/move_group_interface/move_group_interface.h>
 
-
+#include <tf/transform_broadcaster.h>
 namespace manipulation
 {  
   class SkillBase: public LocationManager
@@ -60,6 +54,8 @@ namespace manipulation
 
       ros::Publisher m_target_pub;
       ros::ServiceClient m_grasp_srv;
+
+      tf::TransformBroadcaster m_broadcaster;
 
       bool execute( const std::string& group_name,
                     const moveit::planning_interface::MoveGroupInterface::Plan& plan);

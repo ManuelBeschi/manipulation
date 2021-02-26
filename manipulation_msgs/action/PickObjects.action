@@ -1,6 +1,6 @@
 string[] object_types
 ---
-string object_id
+string object_name
 string object_type
 string inbound_box
 int8 result
@@ -9,6 +9,7 @@ int8 NoObjectsFound=-2
 int8 NoAvailableTrajectories=-3
 int8 GraspFailure=-4
 int8 TrajectoryError=-5
+int8 SceneError=-6
 int8 Success=0
 int8 UnexpectedError=-99
 

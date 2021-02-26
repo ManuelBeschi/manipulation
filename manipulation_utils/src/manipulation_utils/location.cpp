@@ -116,6 +116,12 @@ bool LocationManager::init()
     return false;
   }
 
+  if (!m_nh.getParam("ik_sol_number",m_ik_sol_number))
+  {
+    ROS_WARN("parameter %s/ik_sol_number is not defined, used default value = 200", m_nh.getNamespace().c_str());
+    m_ik_sol_number = 200;
+  }
+
   if (!m_nh.getParam("groups",m_tool_names))
   {
     ROS_ERROR("parameter %s/groups is not defined",m_nh.getNamespace().c_str());
@@ -129,13 +135,6 @@ bool LocationManager::init()
   {
     m_group_names.push_back(p.first);
   }
-
-  if (!m_nh.getParam("ik_sol_number",m_ik_sol_number))
-  {
-    ROS_WARN("parameter %s/ik_sol_number is not defined, used default value = 200", m_nh.getNamespace().c_str());
-    m_ik_sol_number = 200;
-  }
-
 
   // create groups
   for (const std::string& group_name: m_group_names)

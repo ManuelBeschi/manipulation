@@ -28,8 +28,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <ros/ros.h>
 
-#include <manipulation_msgs/AddObjects.h>
 #include <manipulation_msgs/AddBoxes.h>
+#include <manipulation_msgs/AddObjects.h>
+#include <manipulation_msgs/AddSlots.h>
 #include <manipulation_msgs/PickObjectsAction.h>
 #include <object_loader_msgs/addObjects.h>
 
@@ -48,5 +49,17 @@ namespace manipulation
     bool readBoxesFromParam();
     bool readObjectFromParam();
   };
+
+  class OutboundPlaceFromParam
+  {
+  protected:
+    ros::NodeHandle nh_;
+    ros::ServiceClient add_slots_client_;
+
+  public:
+    OutboundPlaceFromParam(const ros::NodeHandle& nh);
+    bool readSlotsFromParam();
+  };
+
 }
 
