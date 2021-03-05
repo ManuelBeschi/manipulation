@@ -286,6 +286,19 @@ bool InboundPickFromParam::readObjectFromParam()
     }
     assert(quaternion.size()==4);
 
+    std::vector<double> approach_distance_d;
+    if( !rosparam_utilities::getParamVector(object,"approach_distance",approach_distance_d) )
+    {
+      ROS_WARN("Object %s has not the field 'approach_distance'",obj.name.c_str());
+      return false;
+    }
+    assert(approach_distance_d.size()==3);
+    Eigen::Vector3d approach_distance_in_frame;
+    approach_distance_in_frame(0) = approach_distance_d.at(0);
+    approach_distance_in_frame(1) = approach_distance_d.at(1);
+    approach_distance_in_frame(2) = approach_distance_d.at(2);
+
+
     tf::TransformListener listener;
     tf::StampedTransform transform;
     ros::Time t0 = ros::Time::now();
@@ -374,10 +387,19 @@ bool InboundPickFromParam::readObjectFromParam()
 
       Eigen::Affine3d T_w_grasp = T_w_object * T_obj_grasp;
  
-      grasp_obj.location.name = obj.name+"_gl"+std::to_string(ig);
+      Eigen::Vector3d approach_distance_in_world = T_w_frame.linear() * approach_distance_in_frame;
+
+      Eigen::Affine3d T_w_approach = T_w_grasp;
+      T_w_approach.translation() += approach_distance_in_world;
+
+      Eigen::Affine3d T_grasp_approach = T_w_grasp.inverse() * T_w_approach;  
+
+      grasp_obj.location.name = obj.name + "_gl"+std::to_string(ig);
       grasp_obj.location.frame = "world";
 
       tf::poseEigenToMsg(T_w_grasp,grasp_obj.location.pose);
+      tf::poseEigenToMsg(T_grasp_approach,grasp_obj.location.approach_relative_pose);
+      tf::poseEigenToMsg(T_grasp_approach,grasp_obj.location.leave_relative_pose);
       grasp_obj.tool_name = tool_name;
       obj.grasping_locations.push_back(grasp_obj);
     }
@@ -473,7 +495,7 @@ bool OutboundPlaceFromParam::readSlotsFromParam()
     std::vector<double> approach_distance_d;
     if( !rosparam_utilities::getParamVector(slot,"approach_distance",approach_distance_d) )
     {
-      ROS_WARN("slot %s has not the field 'approach_distance'",name.c_str());
+      ROS_WARN("Slot %s has not the field 'approach_distance'",name.c_str());
       return false;
     }
     assert(approach_distance_d.size()==3);
@@ -485,7 +507,7 @@ bool OutboundPlaceFromParam::readSlotsFromParam()
     std::vector<double> position;
     if( !rosparam_utilities::getParamVector(slot,"position",position) )
     {
-      ROS_WARN("slot %s has not the field 'position'",name.c_str());
+      ROS_WARN("Slot %s has not the field 'position'",name.c_str());
       return false;
     }
     assert(position.size()==3);
@@ -493,7 +515,7 @@ bool OutboundPlaceFromParam::readSlotsFromParam()
     std::vector<double> quaternion;
     if( !rosparam_utilities::getParamVector(slot,"quaternion",quaternion) )
     {
-      ROS_WARN("slot %s has not the field 'quaternion'",name.c_str());
+      ROS_WARN("Slot %s has not the field 'quaternion'",name.c_str());
       return false;
     }
     assert(quaternion.size()==4);
@@ -539,14 +561,16 @@ bool OutboundPlaceFromParam::readSlotsFromParam()
     Eigen::Affine3d T_w_approach = T_w_slot;
     T_w_approach.translation() += approach_distance_in_world;
 
+    Eigen::Affine3d T_slot_approach = T_w_slot.inverse() * T_w_approach;
+
     manipulation_msgs::Slot slot_;
     slot_.name = name;
     slot_.slot_size = max_objects;
     slot_.location.name = slot_.name;
     slot_.location.frame = "world";
     tf::poseEigenToMsg(T_w_slot,slot_.location.pose);
-    tf::poseEigenToMsg(T_w_approach,slot_.location.approach_relative_pose);
-    tf::poseEigenToMsg(T_w_approach,slot_.location.leave_relative_pose);
+    tf::poseEigenToMsg(T_slot_approach,slot_.location.approach_relative_pose);
+    tf::poseEigenToMsg(T_slot_approach,slot_.location.leave_relative_pose);
     
     slots.push_back(slot_);
   }
@@ -562,8 +586,12 @@ bool OutboundPlaceFromParam::readSlotsFromParam()
     ROS_INFO("Added %lu slots.", slots.size());  
   }
   else
+  {
     ROS_WARN("Can't add any slot to the location manager.");
-
+    return false;
+  }
+    
+  return true;
 }
 
 }

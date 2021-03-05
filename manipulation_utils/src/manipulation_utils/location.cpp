@@ -105,6 +105,8 @@ LocationManager::LocationManager( const ros::NodeHandle& nh):
 
 bool LocationManager::init()
 {
+  ROS_INFO("Init Location Manager.");
+
   robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
   m_kinematic_model = robot_model_loader.getModel();
 
@@ -154,8 +156,31 @@ bool LocationManager::init()
     }
     m_use_single_goal.insert(std::pair<std::string,bool>(group_name,use_single_goal));
 
+    ROS_INFO("Setting PlanningPipeline.");
+    planning_pipeline::PlanningPipelinePtr planning_pipeline = std::make_shared<planning_pipeline::PlanningPipeline>(m_kinematic_model, m_nh, planner_plugin_name, m_request_adapters);
+    m_planning_pipeline.insert(std::pair<std::string,planning_pipeline::PlanningPipelinePtr>(group_name,planning_pipeline));
+
+    ROS_INFO("Setting MoveGroupInterface.");
+    moveit::planning_interface::MoveGroupInterfacePtr group = std::make_shared<moveit::planning_interface::MoveGroupInterface>(group_name);
+    if (!group->startStateMonitor(3))
+    {
+      ROS_ERROR("unable to get robot state for group %s",group_name.c_str());
+      return false;
+    }
+
+    group->setStartState(*group->getCurrentState());
+    m_groups.insert(std::pair<std::string,moveit::planning_interface::MoveGroupInterfacePtr>(group_name,group));
+
+
+    ROS_INFO("Setting JointModelGroup.");
+    moveit::core::JointModelGroup* jmg = m_kinematic_model->getJointModelGroup(group_name);
+    m_joint_models.insert(std::pair<std::string,moveit::core::JointModelGroup*>(group_name,jmg));
+
+
+    ROS_INFO("Setting PlanningScene.");
     m_planning_scene.insert(std::pair<std::string,std::shared_ptr<planning_scene::PlanningScene>>(group_name,std::make_shared<planning_scene::PlanningScene>(m_kinematic_model)));
     collision_detection::AllowedCollisionMatrix acm = m_planning_scene.at(group_name)->getAllowedCollisionMatrixNonConst();
+    
     std::vector<std::string> allowed_collisions;
     bool use_disable_collisions;
     if (m_nh.getParam(group_name+"/use_disable_collisions",use_disable_collisions))
@@ -180,23 +205,6 @@ bool LocationManager::init()
         ROS_WARN("in group %s/%s you set disable_collisions but not use_disable_collisions, it is ignored",m_nh.getNamespace().c_str(),group_name.c_str());
       }
     }
-
-    planning_pipeline::PlanningPipelinePtr planning_pipeline = std::make_shared<planning_pipeline::PlanningPipeline>(m_kinematic_model, m_nh, planner_plugin_name, m_request_adapters);
-    m_planning_pipeline.insert(std::pair<std::string,planning_pipeline::PlanningPipelinePtr>(group_name,planning_pipeline));
-
-    moveit::planning_interface::MoveGroupInterfacePtr group = std::make_shared<moveit::planning_interface::MoveGroupInterface>(group_name);
-    if (!group->startStateMonitor(3))
-    {
-      ROS_ERROR("unable to get robot state for group %s",group_name.c_str());
-      return false;
-    }
-
-    group->setStartState(*group->getCurrentState());
-    m_groups.insert(std::pair<std::string,moveit::planning_interface::MoveGroupInterfacePtr>(group_name,group));
-
-
-    moveit::core::JointModelGroup* jmg = m_kinematic_model->getJointModelGroup(group_name);
-    m_joint_models.insert(std::pair<std::string,moveit::core::JointModelGroup*>(group_name,jmg));
 
     Eigen::Vector3d gravity;
     gravity << 0,0,-9.806; // Muovere in file di configurazione
@@ -255,6 +263,8 @@ bool LocationManager::init()
   m_add_locations_srv = m_nh.advertiseService("add_locations",&LocationManager::addLocationsCb,this);
   m_remove_locations_srv = m_nh.advertiseService("remove_locations",&LocationManager::removeLocationsCb,this);
 
+  ROS_INFO("Location Manager initialized.");
+
   return true;
 }
 
@@ -305,11 +315,9 @@ bool LocationManager::addLocationFromMsg(const manipulation_msgs::Location& loca
     {
       if (!ik(group.first,location_ptr->m_T_w_location,seed,sols,m_ik_sol_number))
       {
-        ROS_WARN("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
-
+        ROS_WARN("Location %s can't be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
         continue;
       }
-
       rosparam_utilities::setParam(m_nh,std::string("slot_ik/"+location_ptr->m_name+"/"+group.first),sols);
     }
     else
@@ -326,10 +334,23 @@ bool LocationManager::addLocationFromMsg(const manipulation_msgs::Location& loca
     if (sols.size() != 0)
       seed.push_back(sols.at(0));
 
-    if (!ik(group.first,location_ptr->m_T_w_approach,seed,sols,m_ik_sol_number))
+    if (!m_nh.hasParam("slot_ik/"+location_ptr->m_name+"/approach/"+group.first))
     {
-      ROS_WARN("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
-      continue;
+      if (!ik(group.first,location_ptr->m_T_w_approach,seed,sols,m_ik_sol_number))
+      {
+        ROS_WARN("Approach to location %s can't be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
+        continue;
+      }
+      rosparam_utilities::setParam(m_nh,std::string("slot_ik/"+location_ptr->m_name+"/approach/"+group.first),sols);
+    }
+    else
+    {
+      std::string what;
+      if (!rosparam_utilities::getParam(m_nh,"slot_ik/"+location_ptr->m_name+"/"+group.first,sols,what))
+      {
+        ROS_ERROR("parameter %s/slot_ik/%s/approach/%s is not correct",m_nh.getNamespace().c_str(),location_ptr->m_name.c_str(),group.first.c_str());
+        return false;
+      }
     }
     location_ptr->addApproachIk(group.first,sols);
 
@@ -340,10 +361,23 @@ bool LocationManager::addLocationFromMsg(const manipulation_msgs::Location& loca
       seed.push_back(sols.at(0));
     }
       
-    if (!ik(group.first,location_ptr->m_T_w_leave,seed,sols,m_ik_sol_number))
+    if (!m_nh.hasParam("slot_ik/"+location_ptr->m_name+"/leave/"+group.first))
+    {  
+      if (!ik(group.first,location_ptr->m_T_w_leave,seed,sols,m_ik_sol_number))
+      {
+        ROS_WARN("Leave from location %s can't be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
+        continue;
+      }
+      rosparam_utilities::setParam(m_nh,std::string("slot_ik/"+location_ptr->m_name+"/leave/"+group.first),sols);
+    }
+    else
     {
-      ROS_WARN("Location %s cannot be reached by group %s",location_ptr->m_name.c_str(),group.first.c_str());
-      continue;
+      std::string what;
+      if (!rosparam_utilities::getParam(m_nh,"slot_ik/"+location_ptr->m_name+"/"+group.first,sols,what))
+      {
+        ROS_ERROR("parameter %s/slot_ik/%s/leave/%s is not correct",m_nh.getNamespace().c_str(),location_ptr->m_name.c_str(),group.first.c_str());
+        return false;
+      }
     }
     location_ptr->addLeaveIk(group.first,sols);
     

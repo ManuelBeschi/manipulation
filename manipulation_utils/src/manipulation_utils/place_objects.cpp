@@ -54,7 +54,7 @@ namespace manipulation
     m_remove_obj_from_slot_srv = m_pnh.advertiseService("remove_obj_from_slot",&PlaceObjects::removeObjectFromSlotCb,this);
     m_reset_slots_srv = m_pnh.advertiseService("outbound/reset",&PlaceObjects::resetSlotsCb,this);
 
-    m_detach_object_srv = m_pnh.serviceClient<object_loader_msgs::detachObject>("detach_object_to_link");
+    m_detach_object_srv = m_nh.serviceClient<object_loader_msgs::detachObject>("detach_object_to_link");
      
     for (const std::string& group_name: m_group_names)
     {
@@ -230,7 +230,7 @@ namespace manipulation
       /* Planning to approach position */
 
       ros::Time t_planning_init = ros::Time::now();
-      ROS_INFO("Planning to box approach position for object placing. Group %s", group_name.c_str());
+      ROS_INFO("Planning to slot approach position for object placing. Group %s", group_name.c_str());
       moveit::planning_interface::MoveGroupInterface::Plan plan = planTo( group_name,
                                                                           available_slot_names,
                                                                           Location::Destination::Approach,

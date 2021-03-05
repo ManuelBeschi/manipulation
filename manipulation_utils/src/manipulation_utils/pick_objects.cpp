@@ -205,8 +205,6 @@ namespace manipulation
     try
     {
       ros::Time t_start = ros::Time::now();
-
-      //std::vector<std::string> type_names = goal->object_types;
       
       std::vector<std::string> possible_boxes_names;
       for (const std::string& type_name: goal->object_types)

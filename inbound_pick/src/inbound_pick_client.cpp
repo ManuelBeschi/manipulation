@@ -18,13 +18,13 @@ int main(int argc, char **argv)
 
   manipulation_msgs::PickObjectsGoal pick_goal;
   pick_goal.object_types.push_back("squadra_piccola");
-  pick_goal.object_types.push_back("squadra_grande");
+  //pick_goal.object_types.push_back("squadra_grande");
 
   pick_ac.sendGoalAndWait(pick_goal);
-  pick_ac.sendGoalAndWait(pick_goal);
+  //pick_ac.sendGoalAndWait(pick_goal);
 
-  pick_ac.sendGoalAndWait(pick_goal);
-  pick_ac.sendGoalAndWait(pick_goal);
+  //pick_ac.sendGoalAndWait(pick_goal);
+  //pick_ac.sendGoalAndWait(pick_goal);
 
   ROS_INFO("pick client stopped");
   return 0;
