@@ -264,8 +264,6 @@ namespace manipulation
                                                                           box_approach_jconf,
                                                                           best_box_name);
 
-      manipulation::BoxPtr selected_box = m_boxes.at(best_box_name);
-
       if (!result)
       {
         action_res.result = manipulation_msgs::PickObjectsResult::NoAvailableTrajectories;
@@ -273,6 +271,8 @@ namespace manipulation
         as->setAborted(action_res,"error in planning to the box");
         return;
       }
+
+      manipulation::BoxPtr selected_box = m_boxes.at(best_box_name);
 
       ROS_INFO("Group %s: plan to approach in %f second",group_name.c_str(),plan.planning_time_);
       ros::Time t_planning = ros::Time::now();

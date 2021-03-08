@@ -177,6 +177,13 @@ namespace manipulation
       ros::Time t_start = ros::Time::now();
     
       /* Check if there is an available slot */
+      if (m_slots.size() == 0)
+      {
+        ROS_ERROR("No available slot to place objects");
+        action_res.result = manipulation_msgs::PlaceObjectsResult::NotInitialized;
+        as->setAborted(action_res,"no available slot");
+        return;
+      }
 
       std::vector<std::string> available_slot_names;
       for (const std::string& slot_name: goal->slot_names)
@@ -197,9 +204,9 @@ namespace manipulation
 
       if(available_slot_names.size() == 0)
       {
-        ROS_ERROR("No available slot to place objects");
+        ROS_ERROR("All the slots are full.");
         action_res.result = manipulation_msgs::PlaceObjectsResult::NotInitialized;
-        as->setAborted(action_res,"slot not managed");
+        as->setAborted(action_res,"all the slots are full");
         return;
       }
       
@@ -240,8 +247,6 @@ namespace manipulation
                                                                           slot_approach_jconf,
                                                                           best_slot_name);
 
-       manipulation::SlotPtr selected_slot = m_slots.at(best_slot_name);
-
       if (!result)
       {
         action_res.result = manipulation_msgs::PlaceObjectsResult::NoAvailableTrajectories;
@@ -249,6 +254,8 @@ namespace manipulation
         as->setAborted(action_res,"error in planning for placing");
         return;
       }
+
+      manipulation::SlotPtr selected_slot = m_slots.at(best_slot_name);
 
       ROS_INFO("Group %s: plan to approach in %f second",group_name.c_str(),plan.planning_time_);
       ros::Time t_planning = ros::Time::now();
