@@ -199,6 +199,12 @@ namespace manipulation
   void PickObjects::pickObjectGoalCb( const manipulation_msgs::PickObjectsGoalConstPtr& goal,
                                       const std::string& group_name)
   {
+    if (m_pick_servers.find(group_name) == m_pick_servers.end())
+    {
+      ROS_ERROR("PickObjectsAction server for group %s is not available.", group_name.c_str());
+      return;
+    }
+
     manipulation_msgs::PickObjectsResult action_res;
     std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PickObjectsAction>> as = m_pick_servers.at(group_name);
     

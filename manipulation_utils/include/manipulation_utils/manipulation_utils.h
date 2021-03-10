@@ -37,12 +37,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace manipulation 
 {
 
-  /* add a grasp location from the location manager
+  /* add a location from the location manager
   */
   bool addLocation( const ros::NodeHandle& nh,
-                    const std::string& location_name);
+                    const manipulation_msgs::Location& location);
 
-  /* remove a grasp location from the location manager
+  /* remove a location from the location manager
   */
   bool removeLocation(const ros::NodeHandle& nh,
                       const std::string& location_name);

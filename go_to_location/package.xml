@@ -50,21 +50,24 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>manipulation_msgs</build_depend>
+  <build_depend>manipulation_utils</build_depend>
   <build_depend>moveit_planning_helper</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>rosdyn_core</build_depend>
   <build_depend>rosparam_utilities</build_depend>
   <build_export_depend>manipulation_msgs</build_export_depend>
+  <build_export_depend>manipulation_utils</build_export_depend>
   <build_export_depend>moveit_planning_helper</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rosdyn_core</build_export_depend>
   <build_export_depend>rosparam_utilities</build_export_depend>
   <exec_depend>manipulation_msgs</exec_depend>
+  <exec_depend>manipulation_utils</exec_depend>
   <exec_depend>moveit_planning_helper</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rosdyn_core</exec_depend>
   <exec_depend>rosparam_utilities</exec_depend>
-
+  <depend>tf_conversions</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

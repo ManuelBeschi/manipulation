@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.10.0)
 project(inbound_pick)
 add_compile_options(-std=c++11 -funroll-loops -Wall -Ofast)
 set(CMAKE_BUILD_TYPE Release)

@@ -1,3 +1,4 @@
+#pragma once
 /*
 Copyright (c) 2019, Manuel Beschi CNR-STIIMA manuel.beschi@stiima.cnr.it
 All rights reserved.
@@ -25,40 +26,31 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <ros/ros.h>
-#include <std_srvs/SetBool.h>
-#include <manipulation_utils/manipulation_load_params_utils.h>
+#include <manipulation_msgs/GoToAction.h>
 
-std::shared_ptr<manipulation::OutboundPlaceFromParam> oub;
+#include <manipulation_utils/skill_base.h>
+#include <manipulation_utils/manipulation_utils.h>
 
-bool addObjectsCb(std_srvs::SetBoolRequest& req, 
-                  std_srvs::SetBoolResponse& res)
+namespace manipulation
 {
-  if (!oub->readSlotsFromParam())
-  {
-    ROS_ERROR("Unable to load objects in the boxes");
-    return false;
-  }
-  ROS_INFO("load objects complete");
-  return true;
+class GoToLocation: public SkillBase
+{
+protected:
+
+  ros::NodeHandle m_nh;
+  ros::NodeHandle m_pnh;
+
+  std::map<std::string,std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::GoToAction>>> m_goto_location_server;
+
+public:
+  GoToLocation( const ros::NodeHandle& nh,
+                const ros::NodeHandle& pnh);
+
+  bool init();
+
+  void gotoGoalCb(const manipulation_msgs::GoToGoalConstPtr& goal,
+                  const std::string& group_name);
+
+};
 }
 
-int main(int argc, char **argv)
-{
-  ros::init(argc, argv, "outbound_place_loader");
-  ros::NodeHandle nh("outbound_place_server");
-
-  oub = std::make_shared<manipulation::OutboundPlaceFromParam>(nh);
-
-  if (!oub->readSlotsFromParam())
-  {
-    ROS_ERROR("Unable to load slots");
-    return 0;
-  }
-
-  ROS_INFO("Outbound slot loaded");
-
-  ros::ServiceServer src = nh.advertiseService("outbound/add_slots",&addObjectsCb);
-  ros::spin();
-  return 0;
-}

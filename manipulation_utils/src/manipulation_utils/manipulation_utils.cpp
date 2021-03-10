@@ -15,7 +15,8 @@ bool addLocation( const ros::NodeHandle& nh,
 {  
   ros::NodeHandle nh_= nh; 
   ros::ServiceClient add_locations_client = nh_.serviceClient<manipulation_msgs::AddLocations>("add_locations");
-
+  add_locations_client.waitForExistence();
+  
   if(add_locations_client.exists())
   {
     manipulation_msgs::AddLocations add_locations;

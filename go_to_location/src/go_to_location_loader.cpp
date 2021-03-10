@@ -29,36 +29,35 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <std_srvs/SetBool.h>
 #include <manipulation_utils/manipulation_load_params_utils.h>
 
-std::shared_ptr<manipulation::OutboundPlaceFromParam> oub;
+std::shared_ptr<manipulation::GoToLocationFromParam> go_to;
 
 bool addObjectsCb(std_srvs::SetBoolRequest& req, 
                   std_srvs::SetBoolResponse& res)
 {
-  if (!oub->readSlotsFromParam())
+  if (!go_to->readLocationsFromParam())
   {
-    ROS_ERROR("Unable to load objects in the boxes");
+    ROS_ERROR("Unable to load locations.");
     return false;
   }
-  ROS_INFO("load objects complete");
+  ROS_INFO("Location loaded.");
   return true;
 }
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "outbound_place_loader");
-  ros::NodeHandle nh("outbound_place_server");
+  ros::init(argc, argv, "go_to_location_loader");
+  ros::NodeHandle nh("go_to_location_server");
 
-  oub = std::make_shared<manipulation::OutboundPlaceFromParam>(nh);
+  go_to = std::make_shared<manipulation::GoToLocationFromParam>(nh);
 
-  if (!oub->readSlotsFromParam())
+  if (!go_to->readLocationsFromParam())
   {
-    ROS_ERROR("Unable to load slots");
+    ROS_ERROR("Unable to load GoTo locations.");
     return 0;
   }
 
-  ROS_INFO("Outbound slot loaded");
+  ROS_INFO("GoTo locations loaded.");
 
-  ros::ServiceServer src = nh.advertiseService("outbound/add_slots",&addObjectsCb);
   ros::spin();
   return 0;
 }

@@ -31,9 +31,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <tf/transform_listener.h>
 #include <tf_conversions/tf_eigen.h>
 #include <rosparam_utilities/rosparam_utilities.h>
+#include <object_loader_msgs/addObjects.h>
 
 #include <manipulation_msgs/Box.h>
 #include <manipulation_msgs/Grasp.h>
+#include <manipulation_msgs/Location.h>
+#include <manipulation_msgs/AddBoxes.h>
+#include <manipulation_msgs/AddObjects.h>
+#include <manipulation_msgs/AddSlots.h>
+#include <manipulation_msgs/PickObjectsAction.h>
+#include <manipulation_utils/manipulation_utils.h> 
 #include <manipulation_utils/manipulation_load_params_utils.h> 
 
 namespace manipulation 
@@ -68,7 +75,7 @@ bool InboundPickFromParam::readBoxesFromParam()
 
   if (config.getType() != XmlRpc::XmlRpcValue::TypeArray)
   {
-    ROS_ERROR("The param is not a list of boxed" );
+    ROS_ERROR("The param is not a list of boxes" );
     return false;
   }
 
@@ -114,8 +121,9 @@ bool InboundPickFromParam::readBoxesFromParam()
       continue;
     }
 
+    std::string what;
     std::vector<double> position;
-    if( !rosparam_utilities::getParamVector(box,"position",position) )
+    if( !rosparam_utilities::getParam(box,"position",position,what) )
     {
       ROS_WARN("The element #%zu has not the field 'position'", i);
       continue;
@@ -123,7 +131,7 @@ bool InboundPickFromParam::readBoxesFromParam()
     assert(position.size()==3);
 
     std::vector<double> quaternion;
-    if( !rosparam_utilities::getParamVector(box,"quaternion",quaternion) )
+    if( !rosparam_utilities::getParam(box,"quaternion",quaternion,what) )
     {
       ROS_WARN("The element #%zu has not the field 'quaternion'", i);
       continue;
@@ -205,7 +213,7 @@ bool InboundPickFromParam::readObjectFromParam()
 
   if (config.getType() != XmlRpc::XmlRpcValue::TypeArray)
   {
-    ROS_ERROR("The param is not a list of boxed" );
+    ROS_ERROR("The param is not a list of objects" );
     return false;
   }
   ROS_INFO("There are %d objects",config.size());
@@ -268,18 +276,18 @@ bool InboundPickFromParam::readObjectFromParam()
 
     ROS_INFO("Object type: %s, box name: %s, frame: %s", type.c_str(),box_name.c_str(),frame_name.c_str());
 
-
+    std::string what;
     std::vector<double> position;
-    if( !rosparam_utilities::getParamVector(object,"position",position) )
+    if( !rosparam_utilities::getParam(object,"position",position, what) )
     {
-      ROS_WARN("pose has not the field 'position'");
+      ROS_WARN("Pose has not the field 'position'");
       continue;
     }
 
     assert(position.size()==3);
 
     std::vector<double> quaternion;
-    if( !rosparam_utilities::getParamVector(object,"quaternion",quaternion) )
+    if( !rosparam_utilities::getParam(object,"quaternion",quaternion,what) )
     {
       ROS_WARN("pose has not the field 'quaternion'");
       continue;
@@ -287,7 +295,7 @@ bool InboundPickFromParam::readObjectFromParam()
     assert(quaternion.size()==4);
 
     std::vector<double> approach_distance_d;
-    if( !rosparam_utilities::getParamVector(object,"approach_distance",approach_distance_d) )
+    if( !rosparam_utilities::getParam(object,"approach_distance",approach_distance_d,what) )
     {
       ROS_WARN("Object %s has not the field 'approach_distance'",obj.name.c_str());
       return false;
@@ -343,7 +351,7 @@ bool InboundPickFromParam::readObjectFromParam()
     }
     if (type_config["grasp_poses"].getType() != XmlRpc::XmlRpcValue::TypeArray)
     {
-      ROS_ERROR("The param is not a list of boxed" );
+      ROS_ERROR("The param is not a list of grasping poses" );
       return false;
     }
     for (unsigned int ig=0;ig<type_config["grasp_poses"].size();ig++)
@@ -359,7 +367,7 @@ bool InboundPickFromParam::readObjectFromParam()
 
 
       std::vector<double> position;
-      if( !rosparam_utilities::getParamVector(pose,"position",position) )
+      if( !rosparam_utilities::getParam(pose,"position",position,what) )
       {
         ROS_WARN("The element #%u has not the field 'name'", ig);
         continue;
@@ -367,7 +375,7 @@ bool InboundPickFromParam::readObjectFromParam()
       assert(position.size()==3);
 
       std::vector<double> quaternion;
-      if( !rosparam_utilities::getParamVector(pose,"quaternion",quaternion) )
+      if( !rosparam_utilities::getParam(pose,"quaternion",quaternion,what) )
       {
         ROS_WARN("The element #%u has not the field 'name'", ig);
         continue;
@@ -445,7 +453,6 @@ OutboundPlaceFromParam::OutboundPlaceFromParam( const ros::NodeHandle &nh):
 
 bool OutboundPlaceFromParam::readSlotsFromParam()
 {
-
   XmlRpc::XmlRpcValue config;
   if (!nh_.getParam("/outbound/slots",config))
   {
@@ -492,8 +499,9 @@ bool OutboundPlaceFromParam::readSlotsFromParam()
     }
     int max_objects = rosparam_utilities::toInt(slot["max_objects"]);
 
+    std::string what;
     std::vector<double> approach_distance_d;
-    if( !rosparam_utilities::getParamVector(slot,"approach_distance",approach_distance_d) )
+    if( !rosparam_utilities::getParam(slot,"approach_distance",approach_distance_d,what) )
     {
       ROS_WARN("Slot %s has not the field 'approach_distance'",name.c_str());
       return false;
@@ -505,7 +513,7 @@ bool OutboundPlaceFromParam::readSlotsFromParam()
     approach_distance_in_frame(2) = approach_distance_d.at(2);
 
     std::vector<double> position;
-    if( !rosparam_utilities::getParamVector(slot,"position",position) )
+    if( !rosparam_utilities::getParam(slot,"position",position,what) )
     {
       ROS_WARN("Slot %s has not the field 'position'",name.c_str());
       return false;
@@ -513,7 +521,7 @@ bool OutboundPlaceFromParam::readSlotsFromParam()
     assert(position.size()==3);
 
     std::vector<double> quaternion;
-    if( !rosparam_utilities::getParamVector(slot,"quaternion",quaternion) )
+    if( !rosparam_utilities::getParam(slot,"quaternion",quaternion,what) )
     {
       ROS_WARN("Slot %s has not the field 'quaternion'",name.c_str());
       return false;
@@ -591,6 +599,115 @@ bool OutboundPlaceFromParam::readSlotsFromParam()
     return false;
   }
     
+  return true;
+}
+
+GoToLocationFromParam::GoToLocationFromParam( const ros::NodeHandle &nh):
+                                              nh_(nh)
+{
+  // nothing to do here
+}
+
+bool GoToLocationFromParam::readLocationsFromParam()
+{
+  XmlRpc::XmlRpcValue go_to_locations;
+  if (!nh_.getParam("/go_to_location/manipulator",go_to_locations))
+  {
+    ROS_ERROR("Unable to find /go_to_location/manipulator");
+    return false;
+  }
+
+  if (go_to_locations.getType() != XmlRpc::XmlRpcValue::TypeArray)
+  {
+    ROS_ERROR("The param is not a struct of locations" );
+    return false;
+  }
+  ROS_INFO("There are %d objects",go_to_locations.size());
+
+  for (int i=0; i < go_to_locations.size(); i++)
+  {   
+    XmlRpc::XmlRpcValue single_location = go_to_locations[i];
+    if( single_location.getType() != XmlRpc::XmlRpcValue::TypeStruct)
+    {
+      ROS_WARN("The element #%d is not a struct", i);
+      continue;
+    }
+
+    if( !single_location.hasMember("name") )
+    {
+      ROS_WARN("The element #%d has not the field 'name'", i);
+      return false;
+    }
+    std::string name = rosparam_utilities::toString(single_location["name"]);
+
+    if( !single_location.hasMember("frame") )
+    {
+      ROS_WARN("The element #%d has not the field 'frame'", i);
+      return false;
+    }
+    std::string frame = rosparam_utilities::toString(single_location["frame"]);
+
+    std::string what;
+    std::vector<double> position;
+    if( !rosparam_utilities::getParam(single_location,"position",position,what) )
+    {
+      ROS_WARN("Slot %s has not the field 'position'",name.c_str());
+      return false;
+    }
+    assert(position.size()==3);
+
+    std::vector<double> quaternion;
+    if( !rosparam_utilities::getParam(single_location,"quaternion",quaternion,what) )
+    {
+      ROS_WARN("Slot %s has not the field 'quaternion'",name.c_str());
+      return false;
+    }
+    assert(quaternion.size()==4);
+
+    Eigen::Quaterniond q( quaternion.at(3),
+                          quaternion.at(0),
+                          quaternion.at(1),
+                          quaternion.at(2));
+
+    Eigen::Affine3d T_frame_tool;
+    T_frame_tool = q;
+    T_frame_tool.translation()(0) = position.at(0);
+    T_frame_tool.translation()(1) = position.at(1);
+    T_frame_tool.translation()(2) = position.at(2);
+
+    tf::TransformListener listener;
+    tf::StampedTransform transform;
+    ros::Time t0 = ros::Time::now();
+    if (!listener.waitForTransform("world",frame,t0,ros::Duration(10)))
+    {
+      ROS_WARN("Unable to find a transform from world to %s", frame.c_str());
+      return false;
+    }
+
+    try
+    {
+      listener.lookupTransform("world", frame, t0, transform);
+    }
+    catch (tf::TransformException ex)
+    {
+      ROS_ERROR("Exception %s",ex.what());
+      ros::Duration(1.0).sleep();
+      return false;
+    }
+
+    Eigen::Affine3d T_w_frame;
+    tf::poseTFToEigen(transform,T_w_frame);
+
+    Eigen::Affine3d T_w_tool = T_w_frame * T_frame_tool;
+
+    manipulation_msgs::Location goto_location;
+    
+    goto_location.name = name;
+    goto_location.frame = "world";
+    tf::poseEigenToMsg(T_w_tool,goto_location.pose);
+
+    manipulation::addLocation(nh_,goto_location);
+  }
   return true;
 }
 

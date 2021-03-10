@@ -26,39 +26,44 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <ros/ros.h>
-#include <std_srvs/SetBool.h>
-#include <manipulation_utils/manipulation_load_params_utils.h>
 
-std::shared_ptr<manipulation::OutboundPlaceFromParam> oub;
+#include <manipulation_utils/go_to_location.h>
 
-bool addObjectsCb(std_srvs::SetBoolRequest& req, 
-                  std_srvs::SetBoolResponse& res)
-{
-  if (!oub->readSlotsFromParam())
-  {
-    ROS_ERROR("Unable to load objects in the boxes");
-    return false;
-  }
-  ROS_INFO("load objects complete");
-  return true;
-}
+#include <moveit_msgs/GetPlanningScene.h>
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "outbound_place_loader");
-  ros::NodeHandle nh("outbound_place_server");
+  ros::init(argc, argv, "go_to_location_server");
+  ros::NodeHandle nh;
+  ros::NodeHandle pnh("~");
 
-  oub = std::make_shared<manipulation::OutboundPlaceFromParam>(nh);
+  ros::AsyncSpinner spinner(4);
+  spinner.start();
 
-  if (!oub->readSlotsFromParam())
+  ROS_INFO("Creating GoToLocation server...");
+  manipulation::GoToLocation go_to(nh,pnh);
+
+  ros::ServiceClient ps_client = nh.serviceClient<moveit_msgs::GetPlanningScene>("/get_planning_scene");
+  ps_client.waitForExistence();
+  moveit_msgs::GetPlanningScene ps_srv;
+
+  if (!go_to.init())
   {
-    ROS_ERROR("Unable to load slots");
-    return 0;
+    ROS_ERROR_NAMED(nh.getNamespace(),"unable to load parameter");
+    return -1;
   }
 
-  ROS_INFO("Outbound slot loaded");
+  ROS_INFO("GoToLocation server initialized.");
 
-  ros::ServiceServer src = nh.advertiseService("outbound/add_slots",&addObjectsCb);
-  ros::spin();
+  ros::Rate lp(10);
+  while (ros::ok())
+  {
+    if (!ps_client.call(ps_srv))
+      ROS_ERROR("Error on  get_planning_scene srv not ok");
+    else
+      go_to.updatePlanningScene(ps_srv.response.scene);
+    
+    lp.sleep();
+  }
   return 0;
 }

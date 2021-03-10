@@ -169,6 +169,12 @@ namespace manipulation
   void PlaceObjects::placeObjectGoalCb( const manipulation_msgs::PlaceObjectsGoalConstPtr& goal,
                                         const std::string& group_name)
   {
+
+    if (m_place_servers.find(group_name) == m_place_servers.end())
+    {
+      ROS_ERROR("PlaceObjectsAction server for group %s is not available.", group_name.c_str());
+      return;
+    }
     manipulation_msgs::PlaceObjectsResult action_res;
     std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>> as = m_place_servers.at(group_name);
 
