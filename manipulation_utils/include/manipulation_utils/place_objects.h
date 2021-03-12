@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <manipulation_msgs/AddSlots.h>
 #include <manipulation_msgs/RemoveSlots.h>
-#include <manipulation_msgs/RemoveObjectsFromSlot.h>
+#include <manipulation_msgs/RemoveObjectFromSlot.h>
 #include <manipulation_msgs/ResetSlots.h>
 #include <manipulation_msgs/PlaceObjectsAction.h>
 
@@ -54,6 +54,7 @@ namespace manipulation
       ros::ServiceServer m_remove_obj_from_slot_srv;      
       ros::ServiceServer m_reset_slots_srv;
       ros::ServiceClient m_detach_object_srv;
+      ros::ServiceClient m_remove_object_from_scene_srv;
 
       std::map<std::string,SlotPtr> m_slots;
 
@@ -74,8 +75,8 @@ namespace manipulation
       bool removeSlotsCb( manipulation_msgs::RemoveSlots::Request& req, 
                           manipulation_msgs::RemoveSlots::Response& res);
 
-      bool removeObjectFromSlotCb(manipulation_msgs::RemoveObjectsFromSlot::Request& req, 
-                                  manipulation_msgs::RemoveObjectsFromSlot::Response& res);
+      bool removeObjectFromSlotCb(manipulation_msgs::RemoveObjectFromSlot::Request& req, 
+                                  manipulation_msgs::RemoveObjectFromSlot::Response& res);
 
       bool resetSlotsCb(manipulation_msgs::ResetSlots::Request& req, 
                         manipulation_msgs::ResetSlots::Response& res);

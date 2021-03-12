@@ -129,10 +129,6 @@ public:
   bool removeLocationsCb( manipulation_msgs::RemoveLocations::Request& req,
                           manipulation_msgs::RemoveLocations::Response& res);
 
-  bool addLocationsFromMsg(const std::vector<manipulation_msgs::Location>& locations);
-
-  bool removeLocations(const std::vector<std::string>& location_names);
-
   moveit::planning_interface::MoveGroupInterface::Plan planTo(const std::string& group_name,
                                                               const std::vector<std::string>& location_names,
                                                               const Location::Destination& destination,
@@ -180,7 +176,11 @@ protected:
 
   bool addLocationFromMsg(const manipulation_msgs::Location& location);
 
+  bool addLocationsFromMsg(const std::vector<manipulation_msgs::Location>& locations);
+
   bool removeLocation(const std::string& location_name);
+
+  bool removeLocations(const std::vector<std::string>& location_names);
 
   bool getIkSolForLocation( const std::string& location_name,
                             const Location::Destination& destination,

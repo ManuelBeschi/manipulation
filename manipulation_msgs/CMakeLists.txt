@@ -39,7 +39,7 @@ add_service_files(
   RemoveBoxes.srv
   RemoveLocations.srv
   RemoveObjects.srv
-  RemoveObjectsFromSlot.srv
+  RemoveObjectFromSlot.srv
   RemoveSlots.srv
   ResetBoxes.srv
   ResetSlots.srv

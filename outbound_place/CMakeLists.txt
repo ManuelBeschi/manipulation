@@ -23,7 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 catkin_package(
-  INCLUDE_DIRS include
+  INCLUDE_DIRS
   LIBRARIES outbound_place
   CATKIN_DEPENDS  moveit_planning_helper
                   manipulation_msgs 

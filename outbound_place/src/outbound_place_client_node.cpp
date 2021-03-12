@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <eigen_conversions/eigen_msg.h>
 #include <actionlib/client/simple_action_client.h>
 #include <manipulation_msgs/PlaceObjectsAction.h>
+#include <manipulation_msgs/RemoveObjectFromSlot.h>
 #include <manipulation_utils/manipulation_load_params_utils.h>
 
 
@@ -58,11 +59,24 @@ int main(int argc, char **argv)
   manipulation_msgs::PlaceObjectsGoal place_goal;
   place_goal.object_name = object_name;
   place_goal.object_type = object_type;
-  place_goal.slot_names.push_back("A1");
+  //place_goal.slot_names.push_back("A1");
   place_goal.slot_names.push_back("A3");
-  place_goal.slot_names.push_back("B1");
+  //place_goal.slot_names.push_back("B1");
 
   place_ac.sendGoalAndWait(place_goal);
+
+
+  ros::ServiceClient remove_object_from_slot_clnt = nh.serviceClient<manipulation_msgs::RemoveObjectFromSlot>("/outbound_place_server/remove_obj_from_slot");
+
+  manipulation_msgs::RemoveObjectFromSlot remove_object_from_slot;
+  remove_object_from_slot.request.object_to_remove_name = object_name;
+  remove_object_from_slot.request.slot_name = "A3";
+
+  if (!remove_object_from_slot_clnt.call(remove_object_from_slot))
+  {
+    ROS_ERROR("Unaspected error calling %s service",remove_object_from_slot_clnt.getService().c_str());
+    return false;
+  }
 
   ROS_INFO("Place client stopped");
   return 0;

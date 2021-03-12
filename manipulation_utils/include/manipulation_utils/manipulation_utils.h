@@ -233,6 +233,10 @@ namespace manipulation
     /* get the availability of the slot
     */
     bool getSlotAvailability();
+
+    /* get the slot size
+    */
+    bool getSlotSize(){return m_slot_size;};
     
     /* get the location name
     */

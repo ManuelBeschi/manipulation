@@ -21,7 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf_conversions
 )
 catkin_package(
-  INCLUDE_DIRS include
+  INCLUDE_DIRS
   LIBRARIES inbound_pick
   CATKIN_DEPENDS moveit_planning_helper manipulation_msgs manipulation_utils roscpp rosdyn_core std_srvs rosparam_utilities object_loader_msgs tf_conversions
   DEPENDS

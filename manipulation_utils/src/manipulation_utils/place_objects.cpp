@@ -31,6 +31,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <manipulation_utils/place_objects.h>
 
 #include <object_loader_msgs/detachObject.h>
+#include <object_loader_msgs/removeObjects.h>
+
 #include <moveit_planning_helper/manage_trajectories.h>
 
 namespace manipulation
@@ -55,7 +57,11 @@ namespace manipulation
     m_reset_slots_srv = m_pnh.advertiseService("outbound/reset",&PlaceObjects::resetSlotsCb,this);
 
     m_detach_object_srv = m_nh.serviceClient<object_loader_msgs::detachObject>("detach_object_to_link");
-     
+    m_detach_object_srv.waitForExistence();
+
+    m_remove_object_from_scene_srv = m_nh.serviceClient<object_loader_msgs::removeObjects>("remove_object_from_scene");
+    m_remove_object_from_scene_srv.waitForExistence();
+
     for (const std::string& group_name: m_group_names)
     {
       std::shared_ptr<actionlib::SimpleActionServer<manipulation_msgs::PlaceObjectsAction>> as;
@@ -131,19 +137,33 @@ namespace manipulation
     return true;
   }
 
-  bool PlaceObjects::removeObjectFromSlotCb(manipulation_msgs::RemoveObjectsFromSlot::Request& req, 
-                                            manipulation_msgs::RemoveObjectsFromSlot::Response& res)
+  bool PlaceObjects::removeObjectFromSlotCb(manipulation_msgs::RemoveObjectFromSlot::Request& req, 
+                                            manipulation_msgs::RemoveObjectFromSlot::Response& res)
   {
     if(m_slots.find(req.slot_name) != m_slots.end())
     {
-      for (int iObj=0; iObj<req.obj_to_remove; iObj++)
-        m_slots.at(req.slot_name)->removeObjectFromSlot();
-      
-      ROS_INFO("Removed %d from the slot %s.", req.obj_to_remove, req.slot_name.c_str() );
+      object_loader_msgs::removeObjects remove_srv;
+      remove_srv.request.obj_ids.push_back(req.object_to_remove_name);
+      ROS_INFO("Remove %s",req.object_to_remove_name.c_str());
+      if (!m_remove_object_from_scene_srv.call(remove_srv))
+      {
+        ROS_ERROR("Unaspected error calling %s service",m_remove_object_from_scene_srv.getService().c_str());
+        return false;
+      }
+      if (!remove_srv.response.success)
+      {
+        ROS_ERROR("Unable to remove object id %s",req.object_to_remove_name.c_str());
+        return false;
+      }
+      ROS_INFO("Remove collision object %s ",req.object_to_remove_name.c_str());
+
+
+      m_slots.at(req.slot_name)->removeObjectFromSlot();
+      ROS_INFO("Removed %d from the slot %s.", req.object_to_remove_name, req.slot_name.c_str() );   
     }
     else
     {
-      ROS_ERROR("The slot %s is not available, can't remove objects.", req.slot_name.c_str() );
+      ROS_ERROR("The slot %s is not available.", req.slot_name.c_str() );
       return false;
     }
 

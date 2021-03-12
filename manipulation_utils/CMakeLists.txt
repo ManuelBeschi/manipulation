@@ -16,7 +16,6 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_planning_helper
   object_loader_msgs
   roscpp
-  roscpp
   rosdyn_core
   rosparam_utilities
   std_srvs
