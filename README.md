@@ -1,3 +1,10 @@
+# manipulation_utils #
+
+[![Build Status][t]][1]
+[![codecov][c]][2] 
+[![Codacy Badge][y]][3]
+[![FOSSA Status][f]][4]
+
 
 The CNR manipulation ROS package provides a series functionalities to manipulation skills.
 
