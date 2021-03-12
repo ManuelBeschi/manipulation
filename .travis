@@ -4,8 +4,7 @@ dist: focal
 
 branches:
   only:
-  - master
-  -enrico_devel
+  - enrico_devel
 
 jobs:
   include:
