@@ -445,6 +445,7 @@ namespace manipulation
       std_srvs::SetBool grasp_req;
       grasp_req.request.data = 1;
       m_grasp_srv.call(grasp_req);
+      // grasp_req.response.success;
       ros::Duration(1).sleep();
 
       action_res.grasping_object_duration = (ros::Time::now()-t_grasp_init);
