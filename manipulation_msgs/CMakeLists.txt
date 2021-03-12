@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(manipulation_msgs)
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   message_generation
