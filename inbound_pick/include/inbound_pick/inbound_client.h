@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <manipulation_msgs/AddObjects.h>
 #include <manipulation_msgs/AddBox.h>
 #include <manipulation_msgs/PickObjectsAction.h>
-#include <object_loader_msgs/addObjects.h>
+#include <object_loader_msgs/AddObjects.h>
 
 namespace pickplace {
 class InboundFromParam

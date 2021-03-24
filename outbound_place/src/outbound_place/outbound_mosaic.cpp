@@ -398,8 +398,8 @@ namespace pickplace
 
     m_target_pub=m_nh.advertise<geometry_msgs::PoseStamped>("target",1);
     m_grasp_srv=m_nh.serviceClient<std_srvs::SetBool>("/gripper/grasp");
-    m_detach_object_srv=m_nh.serviceClient<object_loader_msgs::detachObject>("detach_object_to_link");
-    m_remove_object_srv=m_nh.serviceClient<object_loader_msgs::removeObjects>("remove_object_from_scene");
+    m_detach_object_srv=m_nh.serviceClient<object_loader_msgs::DetachObject>("detach_object_to_link");
+    m_remove_object_srv=m_nh.serviceClient<object_loader_msgs::RemoveObjects>("remove_object_from_scene");
     m_reset_srv=m_nh.advertiseService("outbound/reset",&OutboundMosaic::resetCb,this);
     ROS_WARN("====================================================== RESET ==================================");
     m_init=true;
@@ -600,7 +600,7 @@ namespace pickplace
     ros::Duration(0.5).sleep();
 
 
-    object_loader_msgs::detachObject detach_srv;
+    object_loader_msgs::DetachObject detach_srv;
     detach_srv.request.obj_id=goal->object_id;
     if (!m_detach_object_srv.call(detach_srv))
     {
@@ -621,7 +621,7 @@ namespace pickplace
 
     if (!m_finite_slot)
     {
-      object_loader_msgs::removeObjects remove_srv;
+      object_loader_msgs::RemoveObjects remove_srv;
       remove_srv.request.obj_ids.push_back(goal->object_id);
       ROS_INFO("REMOVE %s",goal->object_id.c_str());
       if (!m_remove_object_srv.call(remove_srv))

@@ -50,8 +50,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <eigen_conversions/eigen_msg.h>
 #include <std_srvs/SetBool.h>
 #include <rosparam_utilities/rosparam_utilities.h>
-#include <object_loader_msgs/detachObject.h>
-#include <object_loader_msgs/removeObjects.h>
+#include <object_loader_msgs/DetachObject.h>
+#include <object_loader_msgs/RemoveObjects.h>
 #include <tf/transform_listener.h>
 #include <tf_conversions/tf_eigen.h>
 #include <rosdyn_core/primitives.h>

@@ -167,7 +167,7 @@ bool PickObjects::init()
   m_list_objects_srv=m_nh.advertiseService("list_objects",&PickObjects::listObjects,this);
   m_reset_box_srv=m_nh.advertiseService("inbound/reset_box",&PickObjects::resetBoxesCb,this);
 
-  m_attach_obj_=m_nh.serviceClient<object_loader_msgs::attachObject>("attach_object_to_link");
+  m_attach_obj_=m_nh.serviceClient<object_loader_msgs::AttachObject>("attach_object_to_link");
 
   m_target_pub=m_nh.advertise<geometry_msgs::PoseStamped>("target",1);
 
@@ -476,7 +476,7 @@ void PickObjects::pickObjectGoalCb(const manipulation_msgs::PickObjectsGoalConst
     ros::Time t_grasp_init=ros::Time::now();
     ros::Duration(0.5).sleep();
 
-    object_loader_msgs::attachObject attach_srv;
+    object_loader_msgs::AttachObject attach_srv;
     attach_srv.request.obj_id=selected_object->getId();
     attach_srv.request.link_name=selected_grasp_pose->getToolName();;
     if (!m_attach_obj_.call(attach_srv))

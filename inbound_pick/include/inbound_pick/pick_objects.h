@@ -48,8 +48,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <manipulation_msgs/ListOfObjects.h>
 #include <eigen_conversions/eigen_msg.h>
 #include <std_srvs/SetBool.h>
-#include <object_loader_msgs/attachObject.h>
-#include <object_loader_msgs/detachObject.h>
+#include <object_loader_msgs/AttachObject.h>
+#include <object_loader_msgs/DetachObject.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <rosparam_utilities/rosparam_utilities.h>
 #include <mutex>

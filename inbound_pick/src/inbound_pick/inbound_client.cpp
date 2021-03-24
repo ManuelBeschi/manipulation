@@ -39,7 +39,7 @@ InboundFromParam::InboundFromParam(const ros::NodeHandle &nh):
 {
   add_objs_client_=nh_.serviceClient<manipulation_msgs::AddObjects>("add_objects");
   add_box_client_ =nh_.serviceClient<manipulation_msgs::AddBox>("add_box");
-  add_col_objs_client_=nh_.serviceClient<object_loader_msgs::addObjects>("add_object_to_scene");
+  add_col_objs_client_=nh_.serviceClient<object_loader_msgs::AddObjects>("add_object_to_scene");
   ROS_INFO_STREAM("Scene spawner is waiting  "<< add_col_objs_client_.getService());
   add_col_objs_client_.waitForExistence();
   ROS_INFO("reading object to spawn");
@@ -194,7 +194,7 @@ bool InboundFromParam::readObjectFromParam()
   ROS_DEBUG("there are %d objects",config.size());
 
 
-  object_loader_msgs::addObjects srv;
+  object_loader_msgs::AddObjects srv;
   std::map<std::string,std::shared_ptr<manipulation_msgs::AddObjects>> add_objs_srv;
 
 
@@ -368,7 +368,7 @@ bool InboundFromParam::readObjectFromParam()
       obj.grasping_poses.push_back(grasp_obj);
     }
 
-    object_loader_msgs::object col_obj;
+    object_loader_msgs::Object col_obj;
     tf::poseEigenToMsg(T_w_object,col_obj.pose.pose);
     col_obj.pose.header.frame_id="world";
     col_obj.object_type=type;
